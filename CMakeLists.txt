@@ -135,6 +135,7 @@ include_directories(
 ## Declare a C++ library
 add_library(ardrone_practicals
    src/Autopilot.cpp
+   src/Overlay.cpp
 )
 
 ## Add cmake target dependencies of the library

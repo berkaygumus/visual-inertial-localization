@@ -48,9 +48,9 @@ class Autopilot {
   /// \return The status.
   DroneStatus droneStatus();
 
-  /// \brief Get the state of charge of the battery
-  /// \return state of charge
-  float batteryStateOfCharge();
+  /// \brief Get the current battery level of the drone as of the latest navdata message.
+  /// \return battery level
+  float getBatteryLevel();
 
   /// \brief Set to automatic control mode.
   void setManual();
