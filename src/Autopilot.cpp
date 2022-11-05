@@ -43,15 +43,15 @@ Autopilot::DroneStatus Autopilot::droneStatus()
   return DroneStatus(navdata.state);
 }
 
-// Get the state of charge of the battery
-float Autopilot::batteryStateOfCharge()     //TODO: is it really float or Float32 ???
+// Get the battery level
+float Autopilot::getBatteryLevel()
 {
-  ardrone_autonomy::Navdata navdata;
+  float batteryLevel;
   {
     std::lock_guard<std::mutex> l(navdataMutex_);
-    navdata = lastNavdata_;
+      batteryLevel = lastNavdata_.batteryPercent;
   }
-  return navdata.batteryPercent;
+  return batteryLevel;
 }
 
 // Request flattrim calibration.
