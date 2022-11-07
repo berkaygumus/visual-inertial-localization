@@ -114,6 +114,13 @@ bool Autopilot::manualMove(double forward, double left, double up,
 // Move the drone.
 bool Autopilot::move(double forward, double left, double up, double rotateLeft)
 {
+
+  //check the boundaries
+  if(fabs(forward) > 1.0 || fabs(left) > 1.0 || fabs(up) > 1.0 || fabs(rotateLeft) > 1.0){
+    std::cout << std::endl << "desired command is out of boundary, it must be in the range [-1, 1]  "  << std::endl;
+    return false;
+  }
+  
   // TODO: implement...
   DroneStatus status = droneStatus();
   //std::cout << status << std::endl;
