@@ -114,6 +114,11 @@ bool Autopilot::manualMove(double forward, double left, double up,
 // Move the drone.
 bool Autopilot::move(double forward, double left, double up, double rotateLeft)
 {
+  // Check for valid drone status.
+  DroneStatus status = droneStatus();
+  if (status != DroneStatus::Flying && status != DroneStatus::Hovering && status != DroneStatus::Flying2) {
+    return false;
+  }
 
   //check the boundaries
   if(fabs(forward) > 1.0 || fabs(left) > 1.0 || fabs(up) > 1.0 || fabs(rotateLeft) > 1.0){
@@ -121,22 +126,15 @@ bool Autopilot::move(double forward, double left, double up, double rotateLeft)
     return false;
   }
   
-  // TODO: implement...
-  DroneStatus status = droneStatus();
-  //std::cout << status << std::endl;
-  if (status == DroneStatus::Flying || status == DroneStatus::Hovering
-      || status == DroneStatus::Flying2) {
-        geometry_msgs::Twist moveMsg;
-        moveMsg.linear.x = forward; 
-        moveMsg.linear.y = left; 
-        moveMsg.linear.z = up; 
-        moveMsg.angular.x = 0;
-        moveMsg.angular.y = 0;
-        moveMsg.angular.z = rotateLeft;
-        pubMove_.publish(moveMsg);
-        return true;
-  }
-  return false;
+  geometry_msgs::Twist moveMsg;
+  moveMsg.linear.x = forward; 
+  moveMsg.linear.y = left; 
+  moveMsg.linear.z = up; 
+  moveMsg.angular.x = 0;
+  moveMsg.angular.y = 0;
+  moveMsg.angular.z = rotateLeft;
+  pubMove_.publish(moveMsg);
+  return true;
 }
 
 }  // namespace arp
