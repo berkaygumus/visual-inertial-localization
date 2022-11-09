@@ -52,8 +52,6 @@ void checkKeysForCommand(arp::Autopilot& autopilot)
       printStatus(success);
     }
 
-    // TODO: process moving commands when in state 3,4, or 7
-    // TODO: Ask tutors if zero move commands should also be printed.
     if (droneStatus == autopilot.Flying || droneStatus == autopilot.Hovering || droneStatus == autopilot.Flying2) {
         // Compute manual move values.
         double forward = state[SDL_SCANCODE_UP]   - state[SDL_SCANCODE_DOWN];
