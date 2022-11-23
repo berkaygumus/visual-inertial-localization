@@ -21,6 +21,7 @@
 #include <sensor_msgs/Imu.h>
 #include <std_msgs/Empty.h>
 #include <std_srvs/Empty.h>
+#include <math.h>
 
 namespace arp {
 
@@ -47,6 +48,10 @@ class Autopilot {
   /// \brief Get the drone status.
   /// \return The status.
   DroneStatus droneStatus();
+
+  /// \brief Get the current battery level of the drone as of the latest navdata message.
+  /// \return battery level
+  float getBatteryLevel();
 
   /// \brief Set to automatic control mode.
   void setManual();
@@ -100,6 +105,7 @@ class Autopilot {
   ros::Publisher pubReset_;  ///< The reset publisher -- use to reset the drone (e-stop).
   ros::Publisher pubTakeoff_;  ///< Publish to take-off the drone.
   ros::Publisher pubLand_;  ///< Publish to land the drone.
+  ros::Publisher pubMove_; ///< Publish move command to the drone
   ros::ServiceClient srvFlattrim_;  ///< To request a flat trim calibration.
   ardrone_autonomy::Navdata lastNavdata_; ///< Store navdata as it comes in asynchronously.
   std::mutex navdataMutex_; ///< We need to lock navdata access due to asynchronous arrival.
