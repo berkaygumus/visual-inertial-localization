@@ -17,6 +17,9 @@
 #include <std_srvs/Empty.h>
 
 #include <arp/Autopilot.hpp>
+#include <arp/cameras/PinholeCamera.hpp>
+#include <arp/cameras/RadialTangentialDistortion.hpp>
+
 #include <Commands.hpp>
 #include <Renderer.hpp>
 
@@ -70,8 +73,22 @@ int main(int argc, char **argv)
   // set up autopilot
   arp::Autopilot autopilot(nh);
   
+  // set up camera model
+  double k1, k2, p1, p2, fu, fc, cu, cv;
+  nh.getParam("k1", k1);
+  nh.getParam("k2", k2);
+  nh.getParam("p1", p1);
+  nh.getParam("p2", p2);
+  nh.getParam("fu", fu);
+  nh.getParam("fc", fc);
+  nh.getParam("cu", cu);
+  nh.getParam("cv", cv);
+  arp::cameras::RadialTangentialDistortion distortion{k1, k2, p1, p2};
+  arp::cameras::PinholeCamera<arp::cameras::RadialTangentialDistortion> phc{gui::IMAGE_WIDTH, gui::IMAGE_HEIGHT, fu, fc, cu, cv, distortion};
+  phc.initialiseUndistortMaps();
+
   // setup rendering
-  gui::Renderer renderer;
+  gui::Renderer renderer{phc};
 
   // enter main event loop
   std::cout << "===== Hello AR Drone ====" << std::endl;
@@ -90,7 +107,7 @@ int main(int argc, char **argv)
     }
 
     // Check if keys are pressed and execute associated commands
-    Commands::checkKeysForCommand(autopilot);
+    Commands::checkKeysForCommand(autopilot, renderer);
   }
 
   // make sure to land the drone...

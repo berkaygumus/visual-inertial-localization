@@ -69,22 +69,35 @@ bool RadialTangentialDistortion::distort(
     const Eigen::Vector2d & pointUndistorted,
     Eigen::Vector2d * pointDistorted) const
 {
-  double x = pointUndistorted(0);
-  double y = pointUndistorted(1);
+  const double& x = pointUndistorted(0);
+  const double& y = pointUndistorted(1);
   double rsq = pow(x, 2) + pow(x, 2);
   double numerator = 1 + k1_ * rsq + k2_ * pow(rsq, 2);
   double x_offset = 2 * p1_ * x * y + p2_ * (rsq + 2 * pow(x, 2));
   double y_offset = p1_ * (rsq + 2 * pow(y, 2) + 2 * p2_ * x * y);
-  *pointDistorted = Eigen::Vector2d{numerator * x + x_offset, numerator * y + y_offset};
+  *pointDistorted = << numerator * x + x_offset, 
+                       numerator * y + y_offset};
   return true;
 }
 bool RadialTangentialDistortion::distort(
     const Eigen::Vector2d & pointUndistorted, Eigen::Vector2d * pointDistorted,
     Eigen::Matrix2d * pointJacobian) const
 {
-  // TODO: implement
-  throw std::runtime_error("not implemented (distort)");
-  return false;
+  distort(pointUndistorted, pointDistorted);
+  // common expressions for jacobian entries
+  const double& u = pointUndistorted(0);
+  const double& v = pointUndistorted(1);
+  double uSq_vSq = pow(u,2) + pow(v,2);
+  double _2k1u_plus_4k2u_uvSq = (2*k1_*u + 4*k2_*u*uSq_vSq);
+  double _2k1v_plus_4k2v_uvSq = (2*k1_*v + 4*k2_*v*uSq_vSq);
+  // jacobian entries
+  double d11 = 1 + 6*p2_*u + 2*p1_*v + k1_*uSq_vSq + k2_*pow(uSq_vSq,2) + u*_2k1u_plus_4k2u_uvSq;
+  double d12 = 2*p1_*u + 2*p2_*v + u*_2k1v_plus_4k2v_uvSq;
+  double d21 = 2*p1_*u + 2*p2_*v + v*_2k1u_plus_4k2u_uvSq;
+  double d22 = 1 + 2*p2_*u + 6*p1_*v + k1_*uSq_vSq + k2_*pow(uSq_vSq,2) + v*_2k1v_plus_4k2v_uvSq;
+  *pointJacobian << d11, d12, 
+                    d21, d22;
+  return true;
 }
 
 bool RadialTangentialDistortion::undistort(

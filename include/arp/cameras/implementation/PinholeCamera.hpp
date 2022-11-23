@@ -165,25 +165,33 @@ template<class DISTORTION_T>
 ProjectionStatus PinholeCamera<DISTORTION_T>::project(
     const Eigen::Vector3d & point, Eigen::Vector2d * imagePoint) const
 {
-  if (point.z() < 0) {
+  const double& x = point(0);
+  const double& y = point(1);
+  const double& z = point(2);
+
+  if (z < 0) {
     return ProjectionStatus::Behind;
   }
-  Eigen::Vector2d tmp;
 
+  Eigen::Vector2d tmp;
   // p(x)
-  tmp(0) = point(0) / point(2);
-  tmp(1) = point(1) / point(2);
-  // d(x')
-  bool result = distortion_.distort(*imagePoint, &tmp);
-  if (!result) {
+  tmp << x / z,
+         y / z;
+  // d(x'), passing tmp as src and dst works, but feels sketchy
+  bool success = distortion_.distort(tmp, &tmp);
+  if (!success) {
     return ProjectionStatus::Invalid;
   }
   // k(x'')
-  tmp(0) = tmp(0) + fu_ + cu_;
-  tmp(1) = tmp(1) + fv_ + cv_;
+  *imagePoint << tmp(0)*fu_ + cu_,
+                 tmp(1)*fv_ + cv_;
 
-  *imagePoint = tmp;
-  return ProjectionStatus::Successful;
+  if (!isInImage(*imagePoint)) {
+    return ProjectionStatus::OutsideImage;
+  } else {
+    return ProjectionStatus::Successful;
+  }
+
 }
 
 // Projects a Euclidean point to a 2d image point (projection).
@@ -192,9 +200,25 @@ ProjectionStatus PinholeCamera<DISTORTION_T>::project(
     const Eigen::Vector3d & point, Eigen::Vector2d * imagePoint,
     Eigen::Matrix<double, 2, 3> * pointJacobian) const
 {
-  // TODO: implement
-  throw std::runtime_error("not implemented (project)");
-  return ProjectionStatus::Invalid;
+  const double& x = point(0);
+  const double& y = point(1);
+  const double& z = point(2);
+  
+  auto status = project(point, imagePoint);
+  if (status != ProjectionStatus::Successful) {
+    return status;
+  }
+
+  // delegated projection function only checks for z < 0
+  // but here we require != 0 in addition.
+  if (z == 0) {
+    return ProjectionStatus::Invalid;
+  }
+
+  *pointJacobian << (1/z), 0    , (-x/z),
+                    0    , (1/z), (-y/z);
+
+  return status;
 }
 
 /////////////////////////////////////////
@@ -208,12 +232,15 @@ bool PinholeCamera<DISTORTION_T>::backProject(
 {
   Eigen::Vector2d tmp;
   // k^-1(u)
-  tmp(0) = (imagePoint(0) - cu_) / fu_;
-  tmp(1) = (imagePoint(0) - cv_) / fv_;
-  // d^-1(x'')
-  distortion_.undistort(imagePoint, &tmp);
+  tmp << (imagePoint(0) - cu_) / fu_,
+         (imagePoint(1) - cv_) / fv_;
+  // d^-1(x''), passing tmp as src and dst works, but feels sketchy
+  auto status = distortion_.undistort(tmp, &tmp);
+  if (!status) {
+    return status;
+  }
   // p^-1(x')
-  *direction = Eigen::Vector3d{tmp(0), tmp(1), 1};
+  *direction << tmp(0), tmp(1), 1;
   return true;
 }
 
