@@ -20,11 +20,11 @@ TEST(PinholeCamera, projectBackProject)
   Eigen::Vector2d imagePoint;
   pinholeCamera.project(point_C,&imagePoint);
 
-  // backProject
+  // // backProject
   Eigen::Vector3d ray_C;
   pinholeCamera.backProject(imagePoint,&ray_C);
 
-  // now they should align:
+  // // now they should align:
   EXPECT_TRUE(fabs(ray_C.normalized().transpose()*point_C.normalized()-1.0)<1.0e-10);
 }
 

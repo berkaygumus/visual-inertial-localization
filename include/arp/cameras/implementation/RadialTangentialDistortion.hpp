@@ -69,17 +69,21 @@ bool RadialTangentialDistortion::distort(
     const Eigen::Vector2d & pointUndistorted,
     Eigen::Vector2d * pointDistorted) const
 {
-  // TODO: implement
-  throw std::runtime_error("not implemented");
-  return false;
-
+  double x = pointUndistorted(0);
+  double y = pointUndistorted(1);
+  double rsq = pow(x, 2) + pow(x, 2);
+  double numerator = 1 + k1_ * rsq + k2_ * pow(rsq, 2);
+  double x_offset = 2 * p1_ * x * y + p2_ * (rsq + 2 * pow(x, 2));
+  double y_offset = p1_ * (rsq + 2 * pow(y, 2) + 2 * p2_ * x * y);
+  *pointDistorted = Eigen::Vector2d{numerator * x + x_offset, numerator * y + y_offset};
+  return true;
 }
 bool RadialTangentialDistortion::distort(
     const Eigen::Vector2d & pointUndistorted, Eigen::Vector2d * pointDistorted,
     Eigen::Matrix2d * pointJacobian) const
 {
   // TODO: implement
-  throw std::runtime_error("not implemented");
+  throw std::runtime_error("not implemented (distort)");
   return false;
 }
 

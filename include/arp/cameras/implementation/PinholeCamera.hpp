@@ -165,9 +165,25 @@ template<class DISTORTION_T>
 ProjectionStatus PinholeCamera<DISTORTION_T>::project(
     const Eigen::Vector3d & point, Eigen::Vector2d * imagePoint) const
 {
-  // TODO: implement
-  throw std::runtime_error("not implemented");
-  return ProjectionStatus::Invalid;
+  if (point.z() < 0) {
+    return ProjectionStatus::Behind;
+  }
+  Eigen::Vector2d tmp;
+
+  // p(x)
+  tmp(0) = point(0) / point(2);
+  tmp(1) = point(1) / point(2);
+  // d(x')
+  bool result = distortion_.distort(*imagePoint, &tmp);
+  if (!result) {
+    return ProjectionStatus::Invalid;
+  }
+  // k(x'')
+  tmp(0) = tmp(0) + fu_ + cu_;
+  tmp(1) = tmp(1) + fv_ + cv_;
+
+  *imagePoint = tmp;
+  return ProjectionStatus::Successful;
 }
 
 // Projects a Euclidean point to a 2d image point (projection).
@@ -177,21 +193,28 @@ ProjectionStatus PinholeCamera<DISTORTION_T>::project(
     Eigen::Matrix<double, 2, 3> * pointJacobian) const
 {
   // TODO: implement
-  throw std::runtime_error("not implemented");
+  throw std::runtime_error("not implemented (project)");
   return ProjectionStatus::Invalid;
 }
 
 /////////////////////////////////////////
 // Methods to backproject points
 
+
 // Back-project a 2d image point into Euclidean space (direction vector).
 template<class DISTORTION_T>
 bool PinholeCamera<DISTORTION_T>::backProject(
     const Eigen::Vector2d & imagePoint, Eigen::Vector3d * direction) const
 {
-  // TODO: implement
-  throw std::runtime_error("not implemented");
-  return success;
+  Eigen::Vector2d tmp;
+  // k^-1(u)
+  tmp(0) = (imagePoint(0) - cu_) / fu_;
+  tmp(1) = (imagePoint(0) - cv_) / fv_;
+  // d^-1(x'')
+  distortion_.undistort(imagePoint, &tmp);
+  // p^-1(x')
+  *direction = Eigen::Vector3d{tmp(0), tmp(1), 1};
+  return true;
 }
 
 
