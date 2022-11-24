@@ -12,29 +12,33 @@ auto pinholeCamera = arp::cameras::PinholeCamera<arp::cameras::RadialTangentialD
 // Test the projection and unprojection
 TEST(PinholeCamera, projectBackProject)
 {
-  // create a random visible point in the camera coordinate frame C
-  auto point_C = pinholeCamera.createRandomVisiblePoint();
+  for (int i = 0; i < 1000; i++) {
+    // create a random visible point in the camera coordinate frame C
+    auto point_C = pinholeCamera.createRandomVisiblePoint();
 
-  // project
-  Eigen::Vector2d imagePoint;
-  auto status = pinholeCamera.project(point_C,&imagePoint);
-  EXPECT_EQ(status, arp::cameras::ProjectionStatus::Successful);
+    // project
+    Eigen::Vector2d imagePoint;
+    auto status = pinholeCamera.project(point_C,&imagePoint);
+    EXPECT_EQ(status, arp::cameras::ProjectionStatus::Successful);
 
-  // // backProject
-  Eigen::Vector3d ray_C;
-  EXPECT_TRUE(pinholeCamera.backProject(imagePoint,&ray_C));
+    // // backProject
+    Eigen::Vector3d ray_C;
+    EXPECT_TRUE(pinholeCamera.backProject(imagePoint,&ray_C));
 
-  // // now they should align:
-  EXPECT_TRUE(fabs(ray_C.normalized().transpose()*point_C.normalized()-1.0)<1.0e-10);
+    // // now they should align:
+    EXPECT_TRUE(fabs(ray_C.normalized().transpose()*point_C.normalized()-1.0)<1.0e-10);
+  }
 }
 
 TEST(PinholeCamera, project_negativeZ_yields_ProjectionStatusBehind)
 {
-  // TODO, more cases with x, y, arbitrary and z negative
-  Eigen::Vector3d point{0, 0, -1};
-  Eigen::Vector2d imagePoint;
-  auto status = pinholeCamera.project(point, &imagePoint);
-  EXPECT_EQ(status, arp::cameras::ProjectionStatus::Behind);
+  for (int i = 0; i < 1000; i++) {
+    auto point_C = pinholeCamera.createRandomVisiblePoint();
+    Eigen::Vector2d imagePoint;
+    point_C(2) = -std::abs(point_C(2)); // negative z
+    auto status = pinholeCamera.project(point_C, &imagePoint);
+    EXPECT_EQ(status, arp::cameras::ProjectionStatus::Behind);
+  }
 }
 
 TEST(PinholeCamera, project_outOfFov_yields_ProjectionStatusOutsideImage)
