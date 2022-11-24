@@ -75,8 +75,8 @@ bool RadialTangentialDistortion::distort(
   double numerator = 1 + k1_ * rsq + k2_ * pow(rsq, 2);
   double x_offset = 2 * p1_ * x * y + p2_ * (rsq + 2 * pow(x, 2));
   double y_offset = p1_ * (rsq + 2 * pow(y, 2) + 2 * p2_ * x * y);
-  *pointDistorted = << numerator * x + x_offset, 
-                       numerator * y + y_offset};
+  *pointDistorted << numerator * x + x_offset, 
+                     numerator * y + y_offset;
   return true;
 }
 bool RadialTangentialDistortion::distort(

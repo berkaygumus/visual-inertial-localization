@@ -8,8 +8,8 @@
 
 namespace gui {
 
-constexpr int IMAGE_WIDTH = 1280;
-constexpr int IMAGE_HEIGHT = 720;
+constexpr int WINDOW_WIDTH = 1280;
+constexpr int WINDOW_HEIGHT = 720;
 
 // not templated in distortion for now
 class Renderer {

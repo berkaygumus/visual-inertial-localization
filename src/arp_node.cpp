@@ -74,17 +74,28 @@ int main(int argc, char **argv)
   arp::Autopilot autopilot(nh);
   
   // set up camera model
-  double k1, k2, p1, p2, fu, fc, cu, cv;
-  nh.getParam("k1", k1);
-  nh.getParam("k2", k2);
-  nh.getParam("p1", p1);
-  nh.getParam("p2", p2);
-  nh.getParam("fu", fu);
-  nh.getParam("fc", fc);
-  nh.getParam("cu", cu);
-  nh.getParam("cv", cv);
+
+  // check if at least one param exists, heuristic
+  if (!nh.hasParam("/arp_node/k1")) {
+    ROS_ERROR("Couldn't find parameter '/arp_node/k1'. Make sure you set up the camera parameters correctly.");
+    return -1;
+  }
+  double k1, k2, p1, p2, fu, fv, cu, cv;
+  nh.getParam("/arp_node/k1", k1);
+  nh.getParam("/arp_node/k2", k2);
+  nh.getParam("/arp_node/p1", p1);
+  nh.getParam("/arp_node/p2", p2);
+  nh.getParam("/arp_node/fu", fu);
+  nh.getParam("/arp_node/fv", fv);
+  nh.getParam("/arp_node/cu", cu);
+  nh.getParam("/arp_node/cv", cv);
+  std::cout << "k^T = [" << k1 << ", " << k2 << ", " << p1 << ", " << p2 << ", 0]" << std::endl;
+  std::cout << "camera: fu="  << fu << ", fv=" << fv << ", cu=" << cu << ", cv=" << cv << std::endl;
   arp::cameras::RadialTangentialDistortion distortion{k1, k2, p1, p2};
-  arp::cameras::PinholeCamera<arp::cameras::RadialTangentialDistortion> phc{gui::IMAGE_WIDTH, gui::IMAGE_HEIGHT, fu, fc, cu, cv, distortion};
+  // arp::cameras::PinholeCamera<arp::cameras::RadialTangentialDistortion> phc{
+  //   gui::DRONE_CAM_IMAGE_WIDTH, gui::DRONE_CAM_IMAGE_HEIGHT, fu, fv, cu, cv, distortion};
+  arp::cameras::PinholeCamera<arp::cameras::RadialTangentialDistortion> phc{
+    gui::WINDOW_WIDTH, gui::WINDOW_HEIGHT, fu, fv, cu, cv, distortion};
   phc.initialiseUndistortMaps();
 
   // setup rendering

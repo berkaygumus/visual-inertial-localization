@@ -7,7 +7,7 @@ Renderer::Renderer(camera_t camera, bool undistortBeforeRender)
     : camera{camera}, undistortBeforeRender{undistortBeforeRender}
 {
     SDL_Init(SDL_INIT_VIDEO);
-    window = SDL_CreateWindow("Hello AR Drone", SDL_WINDOWPOS_UNDEFINED, SDL_WINDOWPOS_UNDEFINED, IMAGE_WIDTH, IMAGE_HEIGHT, 0);
+    window = SDL_CreateWindow("Hello AR Drone", SDL_WINDOWPOS_UNDEFINED, SDL_WINDOWPOS_UNDEFINED, WINDOW_WIDTH, WINDOW_HEIGHT, 0);
     renderer = SDL_CreateRenderer(window, -1, 0);
     SDL_SetRenderDrawColor(renderer, 255, 255, 255, 255);
     SDL_RenderClear(renderer);
@@ -25,6 +25,7 @@ Renderer::~Renderer()
 
 void Renderer::render(cv::Mat& image, arp::Autopilot::DroneStatus droneStatus, float batteryLevel)
 {
+
     // undistort before creating texture
     cv::Mat undistortedImage = image;
 
