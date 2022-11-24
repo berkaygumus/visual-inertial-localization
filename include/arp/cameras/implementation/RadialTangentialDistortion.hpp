@@ -71,12 +71,12 @@ bool RadialTangentialDistortion::distort(
 {
   const double& x = pointUndistorted(0);
   const double& y = pointUndistorted(1);
-  double rsq = pow(x, 2) + pow(x, 2);
-  double numerator = 1 + k1_ * rsq + k2_ * pow(rsq, 2);
-  double x_offset = 2 * p1_ * x * y + p2_ * (rsq + 2 * pow(x, 2));
-  double y_offset = p1_ * (rsq + 2 * pow(y, 2) + 2 * p2_ * x * y);
-  *pointDistorted << numerator * x + x_offset, 
-                     numerator * y + y_offset;
+  double rsq = pow(x, 2) + pow(y, 2);
+  double numerator = 1 + k1_*rsq + k2_*pow(rsq, 2);
+  Eigen::Vector2d offset;
+  offset << 2*p1_*x*y + p2_*(rsq + 2*pow(x, 2)),
+            p1_*(rsq + 2*pow(y, 2) + 2*p2_*x*y);
+  *pointDistorted = numerator * pointUndistorted + offset;
   return true;
 }
 bool RadialTangentialDistortion::distort(
