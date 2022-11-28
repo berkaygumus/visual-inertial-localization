@@ -72,30 +72,31 @@ int main(int argc, char **argv)
 
   // set up autopilot
   arp::Autopilot autopilot(nh);
+
+  bool success = true;
   
   // set up camera model
-
-  // check if at least one param exists, heuristic
-  if (!nh.hasParam("/arp_node/k1")) {
-    ROS_ERROR("Couldn't find parameter '/arp_node/k1'. Make sure you set up the camera parameters correctly.");
-    return -1;
-  }
   double k1, k2, p1, p2, fu, fv, cu, cv;
-  nh.getParam("/arp_node/k1", k1);
-  nh.getParam("/arp_node/k2", k2);
-  nh.getParam("/arp_node/p1", p1);
-  nh.getParam("/arp_node/p2", p2);
-  nh.getParam("/arp_node/fu", fu);
-  nh.getParam("/arp_node/fv", fv);
-  nh.getParam("/arp_node/cu", cu);
-  nh.getParam("/arp_node/cv", cv);
+  int imageWidth, imageHeight;
+  success &= nh.getParam("/arp_node/k1", k1);
+  success &= nh.getParam("/arp_node/k2", k2);
+  success &= nh.getParam("/arp_node/p1", p1);
+  success &= nh.getParam("/arp_node/p2", p2);
+  success &= nh.getParam("/arp_node/fu", fu);
+  success &= nh.getParam("/arp_node/fv", fv);
+  success &= nh.getParam("/arp_node/cu", cu);
+  success &= nh.getParam("/arp_node/cv", cv);
+  success &= nh.getParam("/arp_node/image_width", imageWidth);
+  success &= nh.getParam("/arp_node/image_height", imageHeight);
   std::cout << "k^T = [" << k1 << ", " << k2 << ", " << p1 << ", " << p2 << ", 0]" << std::endl;
   std::cout << "camera: fu="  << fu << ", fv=" << fv << ", cu=" << cu << ", cv=" << cv << std::endl;
+  if (!success) {
+    ROS_ERROR("Error reading camera parameters.");
+    return -1;
+  }
   arp::cameras::RadialTangentialDistortion distortion{k1, k2, p1, p2};
-  // arp::cameras::PinholeCamera<arp::cameras::RadialTangentialDistortion> phc{
-  //   gui::DRONE_CAM_IMAGE_WIDTH, gui::DRONE_CAM_IMAGE_HEIGHT, fu, fv, cu, cv, distortion};
   arp::cameras::PinholeCamera<arp::cameras::RadialTangentialDistortion> phc{
-    gui::WINDOW_WIDTH, gui::WINDOW_HEIGHT, fu, fv, cu, cv, distortion};
+    imageWidth, imageHeight, fu, fv, cu, cv, distortion};
   phc.initialiseUndistortMaps();
 
   // setup rendering
@@ -122,6 +123,7 @@ int main(int argc, char **argv)
   }
 
   // make sure to land the drone...
-  bool success = autopilot.land();
+  success = autopilot.land();
+  return success;
 }
 
