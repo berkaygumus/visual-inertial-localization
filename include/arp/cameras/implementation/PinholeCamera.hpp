@@ -169,7 +169,9 @@ ProjectionStatus PinholeCamera<DISTORTION_T>::project(
   const double& y = point(1);
   const double& z = point(2);
 
-  if (z < 0) {
+  if (abs(z) < std::numeric_limits<double>::epsilon()) {
+    return ProjectionStatus::Invalid;
+  } else if (z < 0) {
     return ProjectionStatus::Behind;
   }
 
@@ -203,22 +205,40 @@ ProjectionStatus PinholeCamera<DISTORTION_T>::project(
   const double& x = point(0);
   const double& y = point(1);
   const double& z = point(2);
-  
-  auto status = project(point, imagePoint);
-  if (status != ProjectionStatus::Successful) {
-    return status;
-  }
 
-  // delegated projection function only checks for z < 0
-  // but here we require != 0 in addition.
-  if (z == 0) {
+  if (abs(z) < std::numeric_limits<double>::epsilon()) {
+    return ProjectionStatus::Invalid;
+  } else if (z < 0) {
+    return ProjectionStatus::Behind;
+  }
+  
+  // p(x)
+  Eigen::Vector2d tmp;
+  tmp << x / z,
+         y / z;
+  // d(x'), passing tmp as src and dst works, but feels sketchy
+  Eigen::Matrix2d distortionJacobian;
+  bool success = distortion_.distort(tmp, &tmp, &distortionJacobian);
+  if (!success) {
     return ProjectionStatus::Invalid;
   }
+  // k(x'')
+  *imagePoint << tmp(0)*fu_ + cu_,
+                 tmp(1)*fv_ + cv_;
 
-  *pointJacobian << (1/z), 0    , (-x/z),
-                    0    , (1/z), (-y/z);
-
-  return status;
+  if (!isInImage(*imagePoint)) {
+    return ProjectionStatus::OutsideImage;
+  } else {
+    double j11 = distortionJacobian(0,0)*fu_/z;
+    double j12 = distortionJacobian(0,1)*fu_/z;
+    double j13 = -distortionJacobian(0,0)*fu_*x/z - (distortionJacobian(0,1)*fu_*y/z);
+    double j21 = distortionJacobian(1,0)*fv_/z;
+    double j22 = distortionJacobian(1,1)*fv_/z;
+    double j23 = -distortionJacobian(1,0)*fv_*x/z - (distortionJacobian(1,1)*fv_*y/z);
+    *pointJacobian << j11, j12, j13,
+                      j21, j22, j23;
+    return ProjectionStatus::Successful;
+  }
 }
 
 /////////////////////////////////////////
