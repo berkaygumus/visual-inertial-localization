@@ -17,6 +17,9 @@
 #include <std_srvs/Empty.h>
 
 #include <arp/Autopilot.hpp>
+#include <arp/cameras/PinholeCamera.hpp>
+#include <arp/cameras/RadialTangentialDistortion.hpp>
+
 #include <Commands.hpp>
 #include <Renderer.hpp>
 
@@ -69,9 +72,35 @@ int main(int argc, char **argv)
 
   // set up autopilot
   arp::Autopilot autopilot(nh);
+
+  bool success = true;
   
+  // set up camera model
+  double k1, k2, p1, p2, fu, fv, cu, cv;
+  int imageWidth, imageHeight;
+  success &= nh.getParam("/arp_node/k1", k1);
+  success &= nh.getParam("/arp_node/k2", k2);
+  success &= nh.getParam("/arp_node/p1", p1);
+  success &= nh.getParam("/arp_node/p2", p2);
+  success &= nh.getParam("/arp_node/fu", fu);
+  success &= nh.getParam("/arp_node/fv", fv);
+  success &= nh.getParam("/arp_node/cu", cu);
+  success &= nh.getParam("/arp_node/cv", cv);
+  success &= nh.getParam("/arp_node/image_width", imageWidth);
+  success &= nh.getParam("/arp_node/image_height", imageHeight);
+  std::cout << "k^T = [" << k1 << ", " << k2 << ", " << p1 << ", " << p2 << ", 0]" << std::endl;
+  std::cout << "camera: fu="  << fu << ", fv=" << fv << ", cu=" << cu << ", cv=" << cv << std::endl;
+  if (!success) {
+    ROS_ERROR("Error reading camera parameters.");
+    return -1;
+  }
+  arp::cameras::RadialTangentialDistortion distortion{k1, k2, p1, p2};
+  arp::cameras::PinholeCamera<arp::cameras::RadialTangentialDistortion> phc{
+    imageWidth, imageHeight, fu, fv, cu, cv, distortion};
+  phc.initialiseUndistortMaps();
+
   // setup rendering
-  gui::Renderer renderer;
+  gui::Renderer renderer{phc};
 
   // enter main event loop
   std::cout << "===== Hello AR Drone ====" << std::endl;
@@ -90,10 +119,11 @@ int main(int argc, char **argv)
     }
 
     // Check if keys are pressed and execute associated commands
-    Commands::checkKeysForCommand(autopilot);
+    Commands::checkKeysForCommand(autopilot, renderer);
   }
 
   // make sure to land the drone...
-  bool success = autopilot.land();
+  success = autopilot.land();
+  return success;
 }
 

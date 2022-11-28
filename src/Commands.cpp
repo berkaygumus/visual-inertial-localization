@@ -20,7 +20,7 @@ void printStatus(const bool success)
     }
 }
 
-void checkKeysForCommand(arp::Autopilot& autopilot)
+void checkKeysForCommand(arp::Autopilot& autopilot, gui::Renderer& renderer)
 {
     //Multiple Key Capture Begins
     const Uint8 *state = SDL_GetKeyboardState(NULL);
@@ -50,6 +50,16 @@ void checkKeysForCommand(arp::Autopilot& autopilot)
       printCommand("Requesting flattrim calibration...     status=", droneStatus);
       bool success = autopilot.flattrimCalibrate();
       printStatus(success);
+    }
+
+    // toggle distortion mode on key-up of 'K'
+    static bool distortionTogglePending = false;
+    if (state[SDL_SCANCODE_K]) {
+      distortionTogglePending = true;
+    } else if (distortionTogglePending) {
+      std::cout << "Toggling camera (un)distortion." << std::endl;
+      renderer.toggleUndistortionBeforeRender();
+      distortionTogglePending = false;
     }
 
     if (droneStatus == autopilot.Flying || droneStatus == autopilot.Hovering || droneStatus == autopilot.Flying2) {
