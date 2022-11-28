@@ -229,12 +229,13 @@ ProjectionStatus PinholeCamera<DISTORTION_T>::project(
   if (!isInImage(*imagePoint)) {
     return ProjectionStatus::OutsideImage;
   } else {
+    double zsq = z*z;
     double j11 = distortionJacobian(0,0)*fu_/z;
     double j12 = distortionJacobian(0,1)*fu_/z;
-    double j13 = -distortionJacobian(0,0)*fu_*x/z - (distortionJacobian(0,1)*fu_*y/z);
+    double j13 = -distortionJacobian(0,0)*fu_*x/zsq - distortionJacobian(0,1)*fu_*y/zsq;
     double j21 = distortionJacobian(1,0)*fv_/z;
     double j22 = distortionJacobian(1,1)*fv_/z;
-    double j23 = -distortionJacobian(1,0)*fv_*x/z - (distortionJacobian(1,1)*fv_*y/z);
+    double j23 = -distortionJacobian(1,0)*fv_*x/zsq - distortionJacobian(1,1)*fv_*y/zsq;
     *pointJacobian << j11, j12, j13,
                       j21, j22, j23;
     return ProjectionStatus::Successful;
