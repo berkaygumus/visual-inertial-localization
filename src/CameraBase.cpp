@@ -73,5 +73,24 @@ Eigen::Vector3d CameraBase::createRandomVisiblePoint(double minDist,
   return ray;
 }
 
+
+// Creates a random unvisible point in Euclidean coordinates.
+Eigen::Vector3d CameraBase::createRandomUnvisiblePoint(double minDist,
+                                                     double maxDist) const
+{
+  // random image point first:
+  Eigen::Vector2d imagePoint = createRandomImagePoint();
+  Eigen::Vector2d outDirection = Eigen::Vector2d::Random();
+  imagePoint[0] += imageWidth_;
+  imagePoint[1] += imageHeight_;
+  // now sample random depth:
+  Eigen::Vector2d depth = Eigen::Vector2d::Random();
+  Eigen::Vector3d ray;
+  backProject(imagePoint, &ray);
+  ray.normalize();
+  ray *= (0.5 * (maxDist - minDist) * (depth[0] + 1.0) + minDist);  // rescale and offset
+  return ray;
+}
+
 }  // namespace cameras
 }  // namespace arp

@@ -43,11 +43,13 @@ TEST(PinholeCamera, project_negativeZ_yields_ProjectionStatusBehind)
 
 TEST(PinholeCamera, project_outOfFov_yields_ProjectionStatusOutsideImage)
 {
-  // TODO, more cases with z positive and |x|, |y| large enough to be out of the image 
-  Eigen::Vector3d point{100000000, 0, 1};
-  Eigen::Vector2d imagePoint;
-  auto status = pinholeCamera.project(point, &imagePoint);
-  EXPECT_EQ(status, arp::cameras::ProjectionStatus::OutsideImage);
+  for (int i = 0; i < 1000; i++) {
+    auto point_C = pinholeCamera.createRandomUnvisiblePoint();
+    Eigen::Vector2d imagePoint;
+    auto status = pinholeCamera.project(point_C, &imagePoint);
+
+    EXPECT_EQ(status, arp::cameras::ProjectionStatus::OutsideImage);
+  } 
 }
 
 //    RDT can't _not_ work, hence the condition for `ProjectionStatus::Invalid` is unreachable in
