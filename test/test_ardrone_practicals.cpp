@@ -79,7 +79,7 @@ TEST(PinholeCamera, projectBackProject_Jacobian)
     std::cout << std::endl << "Central Differences: " << centralDifferences << std::endl;
     
     // compare analytical Jacobian with Jacobian from central differences
-    double epsilon = 1.0e-5; // precision
+    double epsilon = 1.0e-4; // precision
     EXPECT_TRUE(projectJacobian.isApprox(centralDifferences, epsilon));
   }
 }
