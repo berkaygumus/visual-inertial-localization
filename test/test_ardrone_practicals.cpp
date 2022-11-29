@@ -79,29 +79,40 @@ TEST(PinholeCamera, projectBackProject_Jacobian)
     std::cout << std::endl << "Central Differences: " << centralDifferences << std::endl;
     
     // compare analytical Jacobian with Jacobian from central differences
-    double epsilon = 1.0e-5; // precision
+    double epsilon = 1.0e-4; // precision
     EXPECT_TRUE(projectJacobian.isApprox(centralDifferences, epsilon));
   }
 }
 
 TEST(PinholeCamera, project_negativeZ_yields_ProjectionStatusBehind)
 {
+  Eigen::Matrix<double, 2, 3> J;
   for (int i = 0; i < 1000; i++) {
     auto point_C = pinholeCamera.createRandomVisiblePoint();
     Eigen::Vector2d imagePoint;
     point_C(2) = -std::abs(point_C(2)); // negative z
+    
     auto status = pinholeCamera.project(point_C, &imagePoint);
+    EXPECT_EQ(status, arp::cameras::ProjectionStatus::Behind);
+    
+    status = pinholeCamera.project(point_C, &imagePoint, &J);
     EXPECT_EQ(status, arp::cameras::ProjectionStatus::Behind);
   }
 }
 
 TEST(PinholeCamera, project_outOfFov_yields_ProjectionStatusOutsideImage)
 {
-  // TODO, more cases with z positive and |x|, |y| large enough to be out of the image 
-  Eigen::Vector3d point{100000000, 0, 1};
-  Eigen::Vector2d imagePoint;
-  auto status = pinholeCamera.project(point, &imagePoint);
-  EXPECT_EQ(status, arp::cameras::ProjectionStatus::OutsideImage);
+  Eigen::Matrix<double, 2, 3> J;
+  for (int i = 0; i < 1000; i++) {
+    auto point_C = pinholeCamera.createRandomUnvisiblePoint();
+    Eigen::Vector2d imagePoint;
+
+    auto status = pinholeCamera.project(point_C, &imagePoint);
+    EXPECT_EQ(status, arp::cameras::ProjectionStatus::OutsideImage);
+
+    status = pinholeCamera.project(point_C, &imagePoint, &J);
+    EXPECT_EQ(status, arp::cameras::ProjectionStatus::OutsideImage);
+  } 
 }
 
 TEST(PinholeCamera, project_zEquals0_yields_ProjectionStatusInvalid)
