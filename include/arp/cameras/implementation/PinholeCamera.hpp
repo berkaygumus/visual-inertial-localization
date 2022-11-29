@@ -169,7 +169,7 @@ ProjectionStatus PinholeCamera<DISTORTION_T>::project(
   const double& y = point(1);
   const double& z = point(2);
 
-  if (abs(z) < std::numeric_limits<double>::epsilon()) {
+  if (abs(z) < Z_EPSILON) {
     return ProjectionStatus::Invalid;
   } else if (z < 0) {
     return ProjectionStatus::Behind;
@@ -206,7 +206,7 @@ ProjectionStatus PinholeCamera<DISTORTION_T>::project(
   const double& y = point(1);
   const double& z = point(2);
 
-  if (abs(z) < std::numeric_limits<double>::epsilon()) {
+  if (abs(z) < Z_EPSILON) {
     return ProjectionStatus::Invalid;
   } else if (z < 0) {
     return ProjectionStatus::Behind;

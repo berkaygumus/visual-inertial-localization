@@ -106,11 +106,15 @@ TEST(PinholeCamera, project_outOfFov_yields_ProjectionStatusOutsideImage)
 
 TEST(PinholeCamera, project_zEquals0_yields_ProjectionStatusInvalid)
 {
+  const double& eps = arp::cameras::PinholeCamera<arp::cameras::RadialTangentialDistortion>::Z_EPSILON;
   Eigen::Vector2d imagePoint;
   Eigen::Matrix<double, 2, 3> J;
   for (int i = 0; i < 1000; i++) {
     auto point_C = pinholeCamera.createRandomVisiblePoint();
-    point_C(2) = 0;
+
+    // Test 95% of the range [0,Z_EPSILON]
+    // eps*0.95/1000*i, in log space for numerical stability
+    point_C(2) = std::exp(std::log(eps) + std::log(0.95) - std::log(1000) + std::log(i));
 
     // without jacobian
     auto status = pinholeCamera.project(point_C, &imagePoint);
