@@ -35,6 +35,9 @@ void displayInstructions(cv::Mat& image)
       // draw t,l,e control
       putText(image, "[T]/[L]: takeoff/landing ", cv::Point(image.cols - 250, image.rows - 35), Color::Green);
       putText(image, "[Esc]: shut-off motors   ", cv::Point(image.cols - 250, image.rows - 10), Color::Red);
+
+      // draw enable/disable undistortion command
+      putText(image, "[K]: undistortion on/off ", cv::Point(image.cols - 250, image.rows - 60), Color::White);
 }
 
 void displayBattery(cv::Mat& image, float battery)
