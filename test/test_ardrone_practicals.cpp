@@ -80,7 +80,7 @@ TEST(PinholeCamera, projectBackProject_Jacobian)
     
     // compare analytical Jacobian with Jacobian from central differences
     double epsilon = 1.0e-5; // precision
-    // EXPECT_TRUE(projectJacobian.isApprox(centralDifferences, epsilon));
+    EXPECT_TRUE(projectJacobian.isApprox(centralDifferences, epsilon));
   }
 }
 
