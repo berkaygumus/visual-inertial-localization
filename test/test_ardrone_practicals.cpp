@@ -41,16 +41,16 @@ TEST(PinholeCamera, projectBackProject_Jacobian)
     // project
     Eigen::Vector2d imagePoint;
     Eigen::Matrix<double, 2, 3> projectJacobian;
-    pinholeCamera.project(point_C, &imagePoint, &projectJacobian);
+    EXPECT_TRUE(arp::cameras::ProjectionStatus::Successful == pinholeCamera.project(point_C, &imagePoint, &projectJacobian));
 
     // backProject
     Eigen::Vector3d ray_C;
-    pinholeCamera.backProject(imagePoint,&ray_C);
+    EXPECT_TRUE(pinholeCamera.backProject(imagePoint,&ray_C));
 
     // now they should align:
     EXPECT_TRUE(fabs(ray_C.normalized().transpose()*point_C.normalized()-1.0)<1.0e-10);
 
-    // check correctness of analytical Jacobian
+    // create vectors that represent a small step from point_C
     double delta = 1.0e-10;
     Eigen::Vector3d delta_x(delta, 0, 0);    // small step
     Eigen::Vector3d delta_y(0, delta, 0);    // small step
@@ -62,7 +62,7 @@ TEST(PinholeCamera, projectBackProject_Jacobian)
     auto point_C_z_minus = point_C - delta_z;
     auto point_C_z_plus = point_C + delta_z;
 
-    // project
+    // project to get values for central differences computation
     Eigen::Vector2d imagePoint_x_minus, imagePoint_x_plus, imagePoint_y_minus, imagePoint_y_plus, imagePoint_z_minus, imagePoint_z_plus;
     EXPECT_TRUE(arp::cameras::ProjectionStatus::Successful == pinholeCamera.project(point_C_x_minus,&imagePoint_x_minus));
     EXPECT_TRUE(arp::cameras::ProjectionStatus::Successful == pinholeCamera.project(point_C_x_plus,&imagePoint_x_plus));
@@ -75,12 +75,61 @@ TEST(PinholeCamera, projectBackProject_Jacobian)
     Eigen::Matrix<double, 2, 3> centralDifferences;
     centralDifferences << (imagePoint_x_plus[0] - imagePoint_x_minus[0])/(2.0*delta), (imagePoint_y_plus[0] - imagePoint_y_minus[0])/(2.0*delta), (imagePoint_z_plus[0] - imagePoint_z_minus[0])/(2.0*delta),
                           (imagePoint_x_plus[1] - imagePoint_x_minus[1])/(2.0*delta), (imagePoint_y_plus[1] - imagePoint_y_minus[1])/(2.0*delta), (imagePoint_z_plus[1] - imagePoint_z_minus[1])/(2.0*delta);
-    std::cout << std::endl << "Analytical Jacobian: " << projectJacobian << std::endl;
-    std::cout << std::endl << "Central Differences: " << centralDifferences << std::endl;
     
     // compare analytical Jacobian with Jacobian from central differences
     double epsilon = 1.0e-4; // precision
+    // print the failing pairs
+    if(!projectJacobian.isApprox(centralDifferences, epsilon))
+    {
+      std::cout << std::endl << "Analytical Jacobian: " << projectJacobian << std::endl;
+      std::cout << std::endl << "Central Differences: " << centralDifferences << std::endl;
+    }
     EXPECT_TRUE(projectJacobian.isApprox(centralDifferences, epsilon));
+  }
+}
+
+// Test the analytical distortion jacobians by comparing them to central differences implementation.
+TEST(PinholeCamera, distortion_Jacobian)
+{
+  auto distortion = arp::cameras::RadialTangentialDistortion::testObject();
+  for (int i = 0; i < 1000; i++) {
+    // create a random image point
+    auto imagePointUndistorted = pinholeCamera.createRandomImagePoint();
+    
+    // distort
+    Eigen::Vector2d imagePointDistorted;
+    Eigen::Matrix<double, 2, 2> distortJacobian;
+    EXPECT_TRUE(distortion.distort(imagePointUndistorted, &imagePointDistorted, &distortJacobian));
+
+    // create vectors that represent a small step from imagePointUndistorted
+    double delta = 1.0e-10;
+    Eigen::Vector2d delta_u(delta, 0);    // small step
+    Eigen::Vector2d delta_v(0, delta);    // small step
+    auto u_minus = imagePointUndistorted - delta_u;
+    auto u_plus = imagePointUndistorted + delta_u;
+    auto v_minus = imagePointUndistorted - delta_v;
+    auto v_plus = imagePointUndistorted + delta_v;
+    
+    // get the distortion values  
+    Eigen::Vector2d distorted_u_minus, distorted_u_plus, distorted_v_minus, distorted_v_plus;
+    EXPECT_TRUE(true == distortion.distort(u_minus,&distorted_u_minus));
+    EXPECT_TRUE(true == distortion.distort(u_plus,&distorted_u_plus));
+    EXPECT_TRUE(true == distortion.distort(v_minus,&distorted_v_minus));
+    EXPECT_TRUE(true == distortion.distort(v_plus,&distorted_v_plus));
+    
+    // compute central differences
+    Eigen::Matrix<double, 2, 2> centralDifferences;
+    centralDifferences << (distorted_u_plus[0] - distorted_u_minus[0])/(2.0*delta), (distorted_v_plus[0] - distorted_v_minus[0])/(2.0*delta),
+                          (distorted_u_plus[1] - distorted_u_minus[1])/(2.0*delta), (distorted_v_plus[1] - distorted_v_minus[1])/(2.0*delta);
+    
+    // compare analytical Jacobian with Jacobian from central differences
+    double epsilon = 1.0e-2; // precision
+    // print the failing pairs
+    if (!distortJacobian.isApprox(centralDifferences, epsilon)){
+      std::cout << std::endl << "Analytical distortJacobian: " << distortJacobian << std::endl;
+      std::cout << std::endl << "Central Differences: " << centralDifferences << std::endl;
+    }
+    EXPECT_TRUE(distortJacobian.isApprox(centralDifferences, epsilon));
   }
 }
 
