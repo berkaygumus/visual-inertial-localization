@@ -97,7 +97,7 @@ int main(int argc, char **argv)
   arp::cameras::RadialTangentialDistortion distortion{k1, k2, p1, p2};
   arp::cameras::PinholeCamera<arp::cameras::RadialTangentialDistortion> phc{
     imageWidth, imageHeight, fu, fv, cu, cv, distortion};
-  phc.initialiseUndistortMaps();
+  phc.initialiseUndistortMaps(imageWidth, imageHeight, fu, fv, cu, cv);
 
   // setup rendering
   gui::Renderer renderer{phc};
