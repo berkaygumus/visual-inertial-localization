@@ -102,7 +102,7 @@ TEST(PinholeCamera, distortion_Jacobian)
     EXPECT_TRUE(distortion.distort(imagePointUndistorted, &imagePointDistorted, &distortJacobian));
 
     // create vectors that represent a small step from imagePointUndistorted
-    double delta = 1.0e-10;
+    double delta = 1.0e-9;
     Eigen::Vector2d delta_u(delta, 0);    // small step
     Eigen::Vector2d delta_v(0, delta);    // small step
     auto u_minus = imagePointUndistorted - delta_u;
@@ -123,7 +123,7 @@ TEST(PinholeCamera, distortion_Jacobian)
                           (distorted_u_plus[1] - distorted_u_minus[1])/(2.0*delta), (distorted_v_plus[1] - distorted_v_minus[1])/(2.0*delta);
     
     // compare analytical Jacobian with Jacobian from central differences
-    double epsilon = 1.0e-2; // precision
+    double epsilon = 1.0e-4; // precision
     // print the failing pairs
     if (!distortJacobian.isApprox(centralDifferences, epsilon)){
       std::cout << std::endl << "Analytical distortJacobian: " << distortJacobian << std::endl;
