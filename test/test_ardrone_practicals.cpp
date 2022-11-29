@@ -34,7 +34,7 @@ TEST(PinholeCamera, projectBackProject)
 // Test the projection/unprojection and in addition check the analytical Jacobians by comparing them to central differences implementation.
 TEST(PinholeCamera, projectBackProject_Jacobian)
 {
-  for (int i = 0; i < 1000; i++) {
+  for (int i = 0; i < 100; i++) {
     // create a random visible point in the camera coordinate frame C
     auto point_C = pinholeCamera.createRandomVisiblePoint();
     

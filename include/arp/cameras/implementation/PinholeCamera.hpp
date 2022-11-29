@@ -175,18 +175,18 @@ ProjectionStatus PinholeCamera<DISTORTION_T>::project(
     return ProjectionStatus::Behind;
   }
 
-  Eigen::Vector2d tmp;
+  Eigen::Vector2d src, dst;
   // p(x)
-  tmp << x / z,
+  src << x / z,
          y / z;
   // d(x'), passing tmp as src and dst works, but feels sketchy
-  bool success = distortion_.distort(tmp, &tmp);
+  bool success = distortion_.distort(src, &dst);
   if (!success) {
     return ProjectionStatus::Invalid;
   }
   // k(x'')
-  *imagePoint << tmp(0)*fu_ + cu_,
-                 tmp(1)*fv_ + cv_;
+  *imagePoint << dst(0)*fu_ + cu_,
+                 dst(1)*fv_ + cv_;
 
   if (!isInImage(*imagePoint)) {
     return ProjectionStatus::OutsideImage;
@@ -213,18 +213,18 @@ ProjectionStatus PinholeCamera<DISTORTION_T>::project(
   }
   
   // p(x)
-  Eigen::Vector2d tmp;
-  tmp << x / z,
+  Eigen::Vector2d src, dst;
+  src << x / z,
          y / z;
   // d(x'), passing tmp as src and dst works, but feels sketchy
   Eigen::Matrix2d distortionJacobian;
-  bool success = distortion_.distort(tmp, &tmp, &distortionJacobian);
+  bool success = distortion_.distort(src, &dst, &distortionJacobian);
   if (!success) {
     return ProjectionStatus::Invalid;
   }
   // k(x'')
-  *imagePoint << tmp(0)*fu_ + cu_,
-                 tmp(1)*fv_ + cv_;
+  *imagePoint << dst(0)*fu_ + cu_,
+                 dst(1)*fv_ + cv_;
 
   if (!isInImage(*imagePoint)) {
     return ProjectionStatus::OutsideImage;
