@@ -80,19 +80,9 @@ Eigen::Vector3d CameraBase::createRandomUnvisiblePoint(double minDist,
 {
   // random image point first:
   Eigen::Vector2d imagePoint = createRandomImagePoint();
-  if(imagePoint[0]<imageWidth_/2 - 0.5){
-    imagePoint[0] -= imageWidth_/2;
-  }
-  else{
-    imagePoint[0] += imageWidth_/2;
-  }
-  if(imagePoint[1]<imageHeight_/2 - 0.5){
-    imagePoint[1] -= imageHeight_/2;
-  }
-  else{
-    imagePoint[1] += imageHeight_/2;
-  }
-  
+  Eigen::Vector2d signs = Eigen::Vector2d::Random();
+  imagePoint[0] += imageWidth_ * signs[0]/fabs(signs[0]);
+  imagePoint[1] += imageHeight_ * signs[1]/fabs(signs[1]);
   // now sample random depth:
   Eigen::Vector2d depth = Eigen::Vector2d::Random();
   Eigen::Vector3d ray;
