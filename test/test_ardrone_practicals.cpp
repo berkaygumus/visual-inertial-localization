@@ -86,22 +86,31 @@ TEST(PinholeCamera, projectBackProject_Jacobian)
 
 TEST(PinholeCamera, project_negativeZ_yields_ProjectionStatusBehind)
 {
+  Eigen::Matrix<double, 2, 3> J;
   for (int i = 0; i < 1000; i++) {
     auto point_C = pinholeCamera.createRandomVisiblePoint();
     Eigen::Vector2d imagePoint;
     point_C(2) = -std::abs(point_C(2)); // negative z
+    
     auto status = pinholeCamera.project(point_C, &imagePoint);
+    EXPECT_EQ(status, arp::cameras::ProjectionStatus::Behind);
+    
+    status = pinholeCamera.project(point_C, &imagePoint, &J);
     EXPECT_EQ(status, arp::cameras::ProjectionStatus::Behind);
   }
 }
 
 TEST(PinholeCamera, project_outOfFov_yields_ProjectionStatusOutsideImage)
 {
+  Eigen::Matrix<double, 2, 3> J;
   for (int i = 0; i < 1000; i++) {
     auto point_C = pinholeCamera.createRandomUnvisiblePoint();
     Eigen::Vector2d imagePoint;
-    auto status = pinholeCamera.project(point_C, &imagePoint);
 
+    auto status = pinholeCamera.project(point_C, &imagePoint);
+    EXPECT_EQ(status, arp::cameras::ProjectionStatus::OutsideImage);
+
+    status = pinholeCamera.project(point_C, &imagePoint, &J);
     EXPECT_EQ(status, arp::cameras::ProjectionStatus::OutsideImage);
   } 
 }
