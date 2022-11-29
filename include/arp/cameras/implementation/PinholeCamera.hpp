@@ -236,7 +236,6 @@ ProjectionStatus PinholeCamera<DISTORTION_T>::project(
     double j21 = distortionJacobian(1,0)*fv_/z;
     double j22 = distortionJacobian(1,1)*fv_/z;
     double j23 = -distortionJacobian(1,0)*fv_*x/zsq - distortionJacobian(1,1)*fv_*y/zsq;
-
     *pointJacobian << j11, j12, j13,
                       j21, j22, j23;
     return ProjectionStatus::Successful;
