@@ -75,7 +75,7 @@ bool RadialTangentialDistortion::distort(
   double numerator = 1 + k1_*rsq + k2_*pow(rsq, 2);
   Eigen::Vector2d offset;
   offset << 2*p1_*u*v + p2_*(rsq + 2*pow(u, 2)),
-            p1_*(rsq + 2*pow(v, 2) + 2*p2_*u*v);
+            p1_*(rsq + 2*pow(v, 2)) + 2*p2_*u*v;
   *pointDistorted = numerator * pointUndistorted + offset;
   return true;
 }
