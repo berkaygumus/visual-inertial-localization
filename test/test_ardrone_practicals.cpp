@@ -31,17 +31,6 @@ TEST(PinholeCamera, projectBackProject)
   }
 }
 
-TEST(PinholeCamera, project_outOfFov_yields_ProjectionStatusOutsideImage)
-{
-  for (int i = 0; i < 100000; i++) {
-    auto point_C = pinholeCamera.createRandomUnvisiblePoint();
-    Eigen::Vector2d imagePoint;
-    auto status = pinholeCamera.project(point_C, &imagePoint);
-
-    EXPECT_EQ(status, arp::cameras::ProjectionStatus::OutsideImage);
-  } 
-}
-
 // Test the projection/unprojection and in addition check the analytical Jacobians by comparing them to central differences implementation.
 TEST(PinholeCamera, projectBackProject_Jacobian)
 {
@@ -106,6 +95,16 @@ TEST(PinholeCamera, project_negativeZ_yields_ProjectionStatusBehind)
   }
 }
 
+TEST(PinholeCamera, project_outOfFov_yields_ProjectionStatusOutsideImage)
+{
+  for (int i = 0; i < 1000; i++) {
+    auto point_C = pinholeCamera.createRandomUnvisiblePoint();
+    Eigen::Vector2d imagePoint;
+    auto status = pinholeCamera.project(point_C, &imagePoint);
+
+    EXPECT_EQ(status, arp::cameras::ProjectionStatus::OutsideImage);
+  } 
+}
 
 TEST(PinholeCamera, project_zEquals0_yields_ProjectionStatusInvalid)
 {
