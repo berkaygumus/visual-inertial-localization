@@ -134,6 +134,10 @@ class PinholeCamera : public PinholeCameraBase
   EIGEN_MAKE_ALIGNED_OPERATOR_NEW
   typedef DISTORTION_T distortion_t; ///< Makes the distortion type accessible.
 
+  // The maximum magnitude of the z component of a vector before
+  // it is considered to be 0 in terms of projection.
+  static constexpr double Z_EPSILON = 10*std::numeric_limits<double>::epsilon();
+
   /// \brief Constructor that will figure out the type of distortion
   /// @param[in] imageWidth The width in pixels.
   /// @param[in] imageHeight The height in pixels.

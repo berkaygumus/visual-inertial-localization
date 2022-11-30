@@ -166,6 +166,13 @@ class CameraBase
   /// @return    A random Euclidean point.
   virtual Eigen::Vector3d createRandomVisiblePoint(double minDist = 0.0,
                                                    double maxDist = 10.0) const;
+
+  /// \brief Creates a random unvisible point in Euclidean coordinates.
+  /// @param[in] minDist The minimal distance of this point.
+  /// @param[in] maxDist The maximum distance of this point.
+  /// @return    A random Euclidean point.
+  virtual Eigen::Vector3d createRandomUnvisiblePoint(double minDist = 0.0,
+                                                  double maxDist = 10.0) const;
   /// @}
 
  protected:

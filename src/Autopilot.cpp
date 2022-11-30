@@ -20,7 +20,7 @@ Autopilot::Autopilot(ros::NodeHandle& nh)
   pubReset_ = nh_->advertise<std_msgs::Empty>("/ardrone/reset", 1);
   pubTakeoff_ = nh_->advertise<std_msgs::Empty>("/ardrone/takeoff", 1);
   pubLand_ = nh_->advertise<std_msgs::Empty>("/ardrone/land", 1);
-
+  pubMove_ = nh_->advertise<geometry_msgs::Twist>("/cmd_vel", 1);
   // flattrim service
   srvFlattrim_ = nh_->serviceClient<std_srvs::Empty>(
       nh_->resolveName("ardrone/flattrim"), 1);
@@ -41,6 +41,17 @@ Autopilot::DroneStatus Autopilot::droneStatus()
     navdata = lastNavdata_;
   }
   return DroneStatus(navdata.state);
+}
+
+// Get the battery level
+float Autopilot::getBatteryLevel()
+{
+  float batteryLevel;
+  {
+    std::lock_guard<std::mutex> l(navdataMutex_);
+      batteryLevel = lastNavdata_.batteryPercent;
+  }
+  return batteryLevel;
 }
 
 // Request flattrim calibration.
@@ -96,14 +107,34 @@ bool Autopilot::estopReset()
 bool Autopilot::manualMove(double forward, double left, double up,
                            double rotateLeft)
 {
+  // Check for manual mode here?
   return move(forward, left, up, rotateLeft);
 }
 
 // Move the drone.
-bool Autopilot::move(double, double, double, double)
+bool Autopilot::move(double forward, double left, double up, double rotateLeft)
 {
-  // TODO: implement...
-  return false;
+  // Check for valid drone status.
+  DroneStatus status = droneStatus();
+  if (status != DroneStatus::Flying && status != DroneStatus::Hovering && status != DroneStatus::Flying2) {
+    return false;
+  }
+
+  //check the boundaries
+  if(fabs(forward) > 1.0 || fabs(left) > 1.0 || fabs(up) > 1.0 || fabs(rotateLeft) > 1.0){
+    std::cout << std::endl << "desired command is out of boundary, it must be in the range [-1, 1]  "  << std::endl;
+    return false;
+  }
+  
+  geometry_msgs::Twist moveMsg;
+  moveMsg.linear.x = forward; 
+  moveMsg.linear.y = left; 
+  moveMsg.linear.z = up; 
+  moveMsg.angular.x = 0;
+  moveMsg.angular.y = 0;
+  moveMsg.angular.z = rotateLeft;
+  pubMove_.publish(moveMsg);
+  return true;
 }
 
 }  // namespace arp

@@ -14,6 +14,7 @@ find_package(catkin REQUIRED COMPONENTS
   roscpp
   sensor_msgs
   std_msgs
+  geometry_msgs
 )
 
 ## System dependencies are found with CMake's conventions
@@ -177,6 +178,9 @@ target_link_libraries(${PROJECT_NAME}
 add_library(${PROJECT_NAME}_autopilot
    src/Autopilot.cpp
    src/VisualInertialTracker.cpp
+   src/Overlay.cpp
+   src/Commands.cpp
+   src/Renderer.cpp
 )
 target_link_libraries(${PROJECT_NAME}_autopilot
   ${catkin_LIBRARIES}

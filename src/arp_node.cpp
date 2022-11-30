@@ -17,6 +17,11 @@
 #include <std_srvs/Empty.h>
 
 #include <arp/Autopilot.hpp>
+#include <arp/cameras/PinholeCamera.hpp>
+#include <arp/cameras/RadialTangentialDistortion.hpp>
+
+#include <Commands.hpp>
+#include <Renderer.hpp>
 
 class Subscriber
 {
@@ -68,16 +73,34 @@ int main(int argc, char **argv)
   // set up autopilot
   arp::Autopilot autopilot(nh);
 
+  bool success = true;
+  
+  // set up camera model
+  double k1, k2, p1, p2, fu, fv, cu, cv;
+  int imageWidth, imageHeight;
+  success &= nh.getParam("/arp_node/k1", k1);
+  success &= nh.getParam("/arp_node/k2", k2);
+  success &= nh.getParam("/arp_node/p1", p1);
+  success &= nh.getParam("/arp_node/p2", p2);
+  success &= nh.getParam("/arp_node/fu", fu);
+  success &= nh.getParam("/arp_node/fv", fv);
+  success &= nh.getParam("/arp_node/cu", cu);
+  success &= nh.getParam("/arp_node/cv", cv);
+  success &= nh.getParam("/arp_node/image_width", imageWidth);
+  success &= nh.getParam("/arp_node/image_height", imageHeight);
+  std::cout << "k^T = [" << k1 << ", " << k2 << ", " << p1 << ", " << p2 << ", 0]" << std::endl;
+  std::cout << "camera: fu="  << fu << ", fv=" << fv << ", cu=" << cu << ", cv=" << cv << std::endl;
+  if (!success) {
+    ROS_ERROR("Error reading camera parameters.");
+    return -1;
+  }
+  arp::cameras::RadialTangentialDistortion distortion{k1, k2, p1, p2};
+  arp::cameras::PinholeCamera<arp::cameras::RadialTangentialDistortion> phc{
+    imageWidth, imageHeight, fu, fv, cu, cv, distortion};
+  phc.initialiseUndistortMaps(imageWidth, imageHeight, fu, fv, cu, cv);
+
   // setup rendering
-  SDL_Event event;
-  SDL_Init(SDL_INIT_VIDEO);
-  SDL_Window * window = SDL_CreateWindow("Hello AR Drone", SDL_WINDOWPOS_UNDEFINED,
-                                         SDL_WINDOWPOS_UNDEFINED, 640, 360, 0);
-  SDL_Renderer * renderer = SDL_CreateRenderer(window, -1, 0);
-  SDL_SetRenderDrawColor(renderer, 255, 255, 255, 255);
-  SDL_RenderClear(renderer);
-  SDL_RenderPresent(renderer);
-  SDL_Texture * texture;
+  gui::Renderer renderer{phc};
 
   // enter main event loop
   std::cout << "===== Hello AR Drone ====" << std::endl;
@@ -86,84 +109,21 @@ int main(int argc, char **argv)
     ros::spinOnce();
     ros::Duration dur(0.04);
     dur.sleep();
-    SDL_PollEvent(&event);
-    if (event.type == SDL_QUIT) {
+    if(renderer.checkQuit()) {
       break;
     }
 
     // render image, if there is a new one available
     if(subscriber.getLastImage(image)) {
-
-      // TODO: add overlays to the cv::Mat image, e.g. text
-      
-      // https://stackoverflow.com/questions/22702630/converting-cvmat-to-sdl-texture
-      // I'm using SDL_TEXTUREACCESS_STREAMING because it's for a video player, you should
-      // pick whatever suits you most: https://wiki.libsdl.org/SDL_TextureAccess
-      // remember to pick the right SDL_PIXELFORMAT_* !
-      texture = SDL_CreateTexture(
-          renderer, SDL_PIXELFORMAT_BGR24, SDL_TEXTUREACCESS_STREAMING, image.cols, image.rows);
-      SDL_UpdateTexture(texture, NULL, (void*)image.data, image.step1());
-      SDL_RenderClear(renderer);
-      SDL_RenderCopy(renderer, texture, NULL, NULL);
-      SDL_RenderPresent(renderer);
-      // cleanup (only after you're done displaying. you can repeatedly call UpdateTexture without destroying it)
-      SDL_DestroyTexture(texture);
+      renderer.render(image, autopilot.droneStatus(), autopilot.getBatteryLevel());
     }
 
-    //Multiple Key Capture Begins
-    const Uint8 *state = SDL_GetKeyboardState(NULL);
-
-    // check states!
-    auto droneStatus = autopilot.droneStatus();
-    // command
-    if (state[SDL_SCANCODE_ESCAPE]) {
-      std::cout << "ESTOP PRESSED, SHUTTING OFF ALL MOTORS status=" << droneStatus;
-      bool success = autopilot.estopReset();
-      if(success) {
-        std::cout << " [ OK ]" << std::endl;
-      } else {
-        std::cout << " [FAIL]" << std::endl;
-      }
-    }
-    if (state[SDL_SCANCODE_T]) {
-      std::cout << "Taking off...                          status=" << droneStatus;
-      bool success = autopilot.takeoff();
-      if (success) {
-        std::cout << " [ OK ]" << std::endl;
-      } else {
-        std::cout << " [FAIL]" << std::endl;
-      }
-    }
-
-    if (state[SDL_SCANCODE_L]) {
-      std::cout << "Going to land...                       status=" << droneStatus;
-      bool success = autopilot.land();
-      if (success) {
-        std::cout << " [ OK ]" << std::endl;
-      } else {
-        std::cout << " [FAIL]" << std::endl;
-      }
-    }
-    if (state[SDL_SCANCODE_C]) {
-      std::cout << "Requesting flattrim calibration...     status=" << droneStatus;
-      bool success = autopilot.flattrimCalibrate();
-      if (success) {
-        std::cout << " [ OK ]" << std::endl;
-      } else {
-        std::cout << " [FAIL]" << std::endl;
-      }
-    }
-
-    // TODO: process moving commands when in state 3,4, or 7
+    // Check if keys are pressed and execute associated commands
+    Commands::checkKeysForCommand(autopilot, renderer);
   }
 
   // make sure to land the drone...
-  bool success = autopilot.land();
-
-  // cleanup
-  SDL_DestroyTexture(texture);
-  SDL_DestroyRenderer(renderer);
-  SDL_DestroyWindow(window);
-  SDL_Quit();
+  success = autopilot.land();
+  return success;
 }
 
