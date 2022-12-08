@@ -173,15 +173,34 @@ bool ViEkf::predict(uint64_t from_timestampMicroseconds,
     // get the time delta
     const double delta_t = double(z_k.timestampMicroseconds - z_k_minus_1.timestampMicroseconds) * 1.0e-6;
 
-    // TODO: propagate robot state x_ using IMU measurements
+    // Propagate robot state x_ using IMU measurements:
     // i.e. we do x_k = f(x_k_minus_1).
     // Also, we compute the matrix F (linearisation of f()) related to
     // delta_chi_k = F * delta_chi_k_minus_1.
+    auto x_temp = x_;
+    kinematics::ImuKinematicsJacobian jacobian; 
+    if(!kinematics::Imu::stateTransition(x_temp, z_k_minus_1, z_k, x_, &jacobian))
+    {
+      return false;
+    }
 
-    // TODO: propagate covariance matrix P_
+    // propagate covariance matrix P_
+    Eigen::Matrix3d I_3;
+    I_3.setIdentity();
 
+    // L_k * Q_k * L_k^T
+    kinematics::ImuKinematicsJacobian L_k__Q_k__L_kT;
+    L_k__Q_k__L_kT.setZero();
+    L_k__Q_k__L_kT.block(3,3,3,3) = pow(sigma_c_gyr_,2)*delta_t*I_3;
+    L_k__Q_k__L_kT.block(6,6,3,3) = pow(sigma_c_acc_,2)*delta_t*I_3;
+    L_k__Q_k__L_kT.block(9,9,3,3) = pow(sigma_c_gw_,2)*delta_t*I_3;
+    L_k__Q_k__L_kT.block(12,12,3,3) = pow(sigma_c_aw_,2)*delta_t*I_3;
+    
+    // P_k|k-1 = F_k * P_k-1|k-1 * F_k^T + L_k*Q_k*L_k^T
+    auto P_temp = P_;
+    P_ = jacobian*P_temp*jacobian.transpose() + L_k__Q_k__L_kT;
   }
-  return false;  // TODO: change to true once implemented
+  return true;  // TODO: change to true once implemented
 }
 
 // Pass a set of keypoint measurements to trigger an update.
