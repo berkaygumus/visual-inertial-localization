@@ -91,8 +91,9 @@ bool Imu::stateTransition(const RobotState & state_k_minus_1,
   // x_k = x_k-1 [+] delta_step
   state_k = boxPlus(state_k_minus_1, delta_step);
   
+  //// JACOBIAN ////
   if (jacobian) {
-    // Get the rotation matrices R_WS_k_minus_1
+    // Get the rotation matrices
     Eigen::Matrix3d R_WS_k = state_k.q_WS.matrix();
     Eigen::Matrix3d R_WS_k_minus_1 = state_k_minus_1.q_WS.matrix();
   
