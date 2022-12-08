@@ -63,12 +63,9 @@ bool Imu::stateTransition(const RobotState & state_k_minus_1,
     return false;  // negative, no or too large time increments not permitted
   }
 
-  //////// trapezoidal integration
+  //// TRAPEZOIDAL INTEGRATION ////
   // Create gravity vector
   Eigen::Vector3d g_W{0, 0, -9.81};
-  
-  // Get the rotation matrix R_WS_k_minus_1
-  Eigen::Matrix3d R_WS_k_minus_1 = state_k_minus_1.q_WS.matrix();
   
   // Create the two delta_chi states
   DeltaRobotState delta_chi_1, delta_chi_2;
@@ -95,6 +92,10 @@ bool Imu::stateTransition(const RobotState & state_k_minus_1,
   state_k = boxPlus(state_k_minus_1, delta_step);
   
   if (jacobian) {
+    // Get the rotation matrices R_WS_k_minus_1
+    Eigen::Matrix3d R_WS_k = state_k.q_WS.matrix();
+    Eigen::Matrix3d R_WS_k_minus_1 = state_k_minus_1.q_WS.matrix();
+  
     ImuKinematicsJacobian Fc_xkMinus1_tkMinus1;
     Fc_xkMinus1_tkMinus1 = Fc(state_k_minus_1, z_k_minus_1);
     
@@ -105,8 +106,8 @@ bool Imu::stateTransition(const RobotState & state_k_minus_1,
     I_15.setIdentity();
     *jacobian = I_15 + 0.5*dt*Fc_xkMinus1_tkMinus1 + 0.5*dt*Fc_xkMinus1_plus_delta_x1_tkMinus1*(I_15 + dt*Fc_xkMinus1_tkMinus1);
     jacobian->block(3,3,3,3).setIdentity();
-    jacobian->block(3,9,3,3) = -0.5*dt*(R_WS_k_minus_1 + state_k.q_WS.matrix());   // are we allowed to use the components of state_k here??? 
-    jacobian->block(6,3,3,3) = -0.5*dt*crossMx(R_WS_k_minus_1*(z_k_minus_1.acc_S - state_k_minus_1.b_a) + state_k.q_WS.matrix()*(z_k.acc_S - state_k.b_a));  // maybe need to get state_k.q_WS.matrix() from somewhere else. Can we use "z_k.acc_S" and "state_k.b_a" here, since we get them from the non-linear computation. 
+    jacobian->block(3,9,3,3) = -0.5*dt*(R_WS_k_minus_1 + R_WS_k);   // are we allowed to use the components of state_k here??? 
+    jacobian->block(6,3,3,3) = -0.5*dt*crossMx(R_WS_k_minus_1*(z_k_minus_1.acc_S - state_k_minus_1.b_a) + R_WS_k*(z_k.acc_S - state_k.b_a));  // maybe need to get state_k.q_WS.matrix() from somewhere else. Can we use "z_k.acc_S" and "state_k.b_a" here, since we get them from the non-linear computation. 
   }
   return true;
 }
