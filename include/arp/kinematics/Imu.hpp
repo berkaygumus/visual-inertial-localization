@@ -17,6 +17,15 @@ struct RobotState {
   Eigen::Vector3d b_a;  ///< The accelerometer bias.
 };
 
+struct DeltaRobotState {
+  EIGEN_MAKE_ALIGNED_OPERATOR_NEW
+  Eigen::Vector3d delta_t_WS;  ///< The delta of the position relative to the W frame.
+  Eigen::Vector3d delta_alpha_WS;  ///< The delta alpha of rotation W-S.
+  Eigen::Vector3d delta_v_W;  ///< The delta of the velocity expressed in W frame.
+  Eigen::Vector3d delta_b_g;  ///< The delta of the gyro bias.
+  Eigen::Vector3d delta_b_a;  ///< The delta of the accelerometer bias.
+};
+
 typedef Eigen::Matrix<double,15,15> ImuKinematicsJacobian;
 
 struct ImuMeasurement {
