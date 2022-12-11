@@ -19,6 +19,8 @@
     <remap from="ardrone/land" to="drone/land"/> 
     <remap from="ardrone/navdata" to="drone/navdata"/> 
     <!-- Camera parameters-->
+    <param name="image_width" value="640" />
+    <param name="image_height" value="360" />
     <param name="fu" value="185.6909" />
     <param name="fv" value="185.6909" />
     <param name="cu" value="319.5" />
