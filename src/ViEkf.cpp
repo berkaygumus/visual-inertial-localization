@@ -175,11 +175,15 @@ bool ViEkf::predict(uint64_t from_timestampMicroseconds,
 
     // predict x
     kinematics::ImuKinematicsJacobian F;
-    kinematics::Imu::stateTransition(x_, z_k_minus_1, z_k, x_, &F);
+    bool success = kinematics::Imu::stateTransition(x_, z_k_minus_1, z_k, x_, &F);
+    if (!success) {
+      return false;
+    }
 
     // predict P
     auto dtI3 = delta_t*Eigen::Matrix3d::Identity();
     Eigen::Matrix<double, 15, 15> LQL_T;
+    LQL_T.setZero();
     LQL_T.block<3,3>(3,3) = sigma_c_gyr_*sigma_c_gyr_*dtI3;
     LQL_T.block<3,3>(6,6) = sigma_c_acc_*sigma_c_acc_*dtI3;
     LQL_T.block<3,3>(9,9) = sigma_c_gw_*sigma_c_gw_*dtI3;
