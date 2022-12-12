@@ -28,12 +28,8 @@ namespace arp {
 
 void drawKeypointsOnImage(const DetectionVec& detections, const std::vector<cv::KeyPoint> keypoints, const std::vector<int> inliers, const cv::Mat& image, cv::Mat& visualisationImage)
 {
-  visualisationImage = image.clone();
-  // Draw all non-matched keypoints in red.
-  for(const auto& ptID : inliers){
-    // TODO: only use non-matched keypoints (currently all keypoints are drawn in red)
-  }
-  cv::drawKeypoints(visualisationImage, keypoints, visualisationImage, cv::Scalar(0,0,255)); // TODO: maybe only visualize the non-detected ones here.
+  // Draw all found keypoints in red.
+  cv::drawKeypoints(image, keypoints, visualisationImage, cv::Scalar(0,0,255)); // TODO: maybe only visualize the non-detected ones here.
   
   // Draw all matched (and inlier) keypoints in green.
   std::vector<cv::KeyPoint> matchedKeypoints;
@@ -249,11 +245,11 @@ bool Frontend::detectAndMatch(const cv::Mat& image, const Eigen::Vector3d & extr
   cv::Mat descriptors;
   detectAndDescribe(grayScale, extractionDirection, keypoints, descriptors);
 
-  // TODO match to map:
+  // match keypoints from current image to landmarks of the map:
   std::vector<cv::Point2d> matchedImagePoints;
   std::vector<cv::Point3d> matchedLandmarkPoints;
   std::vector<uint64_t> matchedLandmarkIDs;
-  const int numPosesToMatch = 50; // increase this number to search in more key frames.
+  const int numPosesToMatch = 3; // increase this number to search in more key frames.
   int checkedPoses = 0;
   for(const auto& lms : landmarks_) { // go through all poses
     for(const auto& lm : lms.second) { // go through all landmarks seen from this pose
@@ -262,9 +258,9 @@ bool Frontend::detectAndMatch(const cv::Mat& image, const Eigen::Vector3d & extr
         const float dist = brisk::Hamming::PopcntofXORed(
               keypointDescriptor, lm.descriptor.data, 3); // compute desc. distance: 3 for 3x128bit (=48 bytes)
         
-        // TODO check if a match and process accordingly
+        // check if a match and add them to the "matched" vectors.
         if(dist < 60.0) {
-          // match! add world point of landmark and image point of keypoint the respective vector to use them in ransac.
+          // match! add world point of landmark (+ ID) and image point of keypoint the respective vector to use them in ransac.
           cv::Point2d matchedImagePoint;
           matchedImagePoint.x = keypoints[k].pt.x;
           matchedImagePoint.y = keypoints[k].pt.y;
@@ -275,8 +271,6 @@ bool Frontend::detectAndMatch(const cv::Mat& image, const Eigen::Vector3d & extr
           matchedLandmarkPoint.z = lm.point[2];
           matchedLandmarkPoints.push_back(matchedLandmarkPoint);
           matchedLandmarkIDs.push_back(lm.landmarkId);
-        } else {
-          break;  // keypoint descriptor doesn't match with landmark descriptor  
         }
       }
     }
