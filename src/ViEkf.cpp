@@ -173,15 +173,25 @@ bool ViEkf::predict(uint64_t from_timestampMicroseconds,
     // get the time delta
     const double delta_t = double(z_k.timestampMicroseconds - z_k_minus_1.timestampMicroseconds) * 1.0e-6;
 
-    // TODO: propagate robot state x_ using IMU measurements
-    // i.e. we do x_k = f(x_k_minus_1).
-    // Also, we compute the matrix F (linearisation of f()) related to
-    // delta_chi_k = F * delta_chi_k_minus_1.
+    // predict x
+    kinematics::ImuKinematicsJacobian F;
+    bool success = kinematics::Imu::stateTransition(x_, z_k_minus_1, z_k, x_, &F);
+    if (!success) {
+      return false;
+    }
 
-    // TODO: propagate covariance matrix P_
+    // predict P
+    auto dtI3 = delta_t*Eigen::Matrix3d::Identity();
+    Eigen::Matrix<double, 15, 15> LQL_T;
+    LQL_T.setZero();
+    LQL_T.block<3,3>(3,3) = sigma_c_gyr_*sigma_c_gyr_*dtI3;
+    LQL_T.block<3,3>(6,6) = sigma_c_acc_*sigma_c_acc_*dtI3;
+    LQL_T.block<3,3>(9,9) = sigma_c_gw_*sigma_c_gw_*dtI3;
+    LQL_T.block<3,3>(12,12) = sigma_c_aw_*sigma_c_aw_*dtI3;
+    P_ = F*P_*F.transpose() + LQL_T;
 
   }
-  return false;  // TODO: change to true once implemented
+  return true; 
 }
 
 // Pass a set of keypoint measurements to trigger an update.
