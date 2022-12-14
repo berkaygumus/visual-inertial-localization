@@ -267,24 +267,44 @@ bool ViEkf::update(const Detection & detection){
   Eigen::Vector4d hp_W(0,0,0,1);
   hp_W.head<3>() = detection.landmark;
 
-  // TODO: transform the corner point from world frame into the camera frame
+  // transform the corner point from world frame into the camera frame
   // (remember the camera projection will assume the point is represented
   // in camera coordinates):
+  auto landmark_C = T_SC_.inverse() * T_WS.inverse() * hp_W;
+  Eigen::Vector2d imagePoint;
+  Eigen::Matrix<double, 2, 3> U;
+  cameras::ProjectionStatus projectionStatus = cameraModel_.project(landmark_C.head<3>(), &imagePoint, &U);
 
-  // TODO: calculate the reprojection error y (residual)
+  // check validity of projection -- return false if not successful!
+  if (projectionStatus != cameras::ProjectionStatus::Successful) {
+    return false;
+  }
+
+  // calculate the reprojection error y (residual)
   // using the PinholeCamera::project
-  const Eigen::Vector2d y;  // = TODO
+  const Eigen::Vector2d y = detection.keypoint - imagePoint;
 
-  // TODO: check validity of projection -- return false if not successful!
+  // calculate measurement Jacobian H
+  Eigen::Matrix3d R_CS = T_SC_.R().transpose();
+  Eigen::Matrix3d R_bar_WS_T = x_.q_WS.matrix().transpose();
+  Eigen::Matrix<double, 2, 15> H_k;
+  H_k.setZero();
 
-  // TODO: calculate measurement Jacobian H
+  //////// dh / d w_t_s
+  Eigen::Matrix<double, 3, 3> d_cl_d_wts = -R_bar_WS_T;
+  H_k.block<2,3>(0, 0) = U * R_CS * d_cl_d_wts;
+
+  //////// dh / d delta_alpha
+  Eigen::Matrix3d d_cl_d_delta_alpha = R_bar_WS_T * kinematics::crossMx(detection.landmark - x_.t_WS);
+  H_k.block<2,3>(0,3) = U * R_CS * d_cl_d_delta_alpha;
+  //! calculate measurement Jacobian H
 
   // Obtain the measurement covariance form parameters:
   const double r = sigma_imagePoint_ * sigma_imagePoint_;
   Eigen::Matrix2d R = Eigen::Vector2d(r, r).asDiagonal();  // the measurement covariance
 
-  // TODO: compute residual covariance S
-  Eigen::Matrix2d S;  // = TODO
+  // compute residual covariance S
+  Eigen::Matrix2d S = H_k * P_ * H_k.transpose() + R;
 
   // chi2 test
   if(y.transpose()*S.inverse()*y > 40.0){
@@ -292,15 +312,25 @@ bool ViEkf::update(const Detection & detection){
     return false;
   }
 
-  // TODO: compute Kalman gain K
+  // compute Kalman gain K
+  Eigen::Matrix<double, 15, 2> K_k = P_ * H_k.transpose() * S.inverse();
 
-  // TODO: compute increment Delta_chi
+  // compute increment Delta_chi
+  Eigen::VectorXd deltaChi = K_k * y;
 
-  // TODO: perform update. Note: multiplicative for the quaternion!!
+  // perform update (state)
+  x_.t_WS = x_.t_WS + deltaChi.head<3>();
+  x_.q_WS = kinematics::deltaQ(deltaChi.segment<3>(3)) * x_.q_WS;
+  x_.q_WS.normalize();
+  x_.v_W = x_.v_W + deltaChi.segment<3>(6);
+  x_.b_g = x_.b_g + deltaChi.segment<3>(9);
+  x_.b_a = x_.b_a + deltaChi.segment<3>(12);
 
-  // TODO: update to covariance matrix:
+  // perform update (covariance matrix)
+  P_ = (Eigen::Matrix<double, 15, 15>::Identity() - K_k * H_k) * P_;
+  // P_ = K_k * H_k * P_;     // <-- TODO: tests also pass with this?? wat
 
-  return false;  // TODO: change to true once implemented...
+  return true;
 }
 
 }  // namespace arp
