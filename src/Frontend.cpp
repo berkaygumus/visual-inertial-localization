@@ -26,12 +26,12 @@
 
 namespace arp {
 
-void drawKeypointsOnImage(const DetectionVec& detections, const std::vector<cv::KeyPoint> keypoints, const std::vector<int> inliers, const cv::Mat& image, cv::Mat& visualisationImage)
+void drawKeypointsOnImage(const DetectionVec& detections, const std::vector<cv::KeyPoint> keypoints, const cv::Mat& image, cv::Mat& visualisationImage)
 {
   // Draw all found keypoints in red.
-  cv::drawKeypoints(image, keypoints, visualisationImage, cv::Scalar(0,0,255)); // TODO: maybe only visualize the non-detected ones here.
+  cv::drawKeypoints(image, keypoints, visualisationImage, cv::Scalar(0,0,255));
   
-  // Draw all matched (and inlier) keypoints in green.
+  // Draw all matched (and inlier) keypoints in green over the red ones.
   std::vector<cv::KeyPoint> matchedKeypoints;
   for (const auto& detection : detections){
     // cv::drawMarker(visualisationImage, cv::Point2d{detection.keypoint[0],detection.keypoint[1]}, cv::Scalar(0,255,0));
@@ -298,7 +298,7 @@ bool Frontend::detectAndMatch(const cv::Mat& image, const Eigen::Vector3d & extr
   }
   
   // visualise by painting keypoints into visualisationImage
-  drawKeypointsOnImage(detections, keypoints, inliers, image, visualisationImage);
+  drawKeypointsOnImage(detections, keypoints, image, visualisationImage);
   
   return ransacSuccess; // return true if successful...
 }
