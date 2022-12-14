@@ -160,7 +160,7 @@ int main(int argc, char **argv)
   // enter main event loop
   std::cout << "===== Hello AR Drone ====" << std::endl;
   // cv::Mat image;
-  cv::Mat visualisationImage;
+  cv::Mat imageWithKeypoints;
   while (ros::ok()) {
     ros::spinOnce();
     ros::Duration dur(0.04);
@@ -173,8 +173,8 @@ int main(int argc, char **argv)
     // if(subscriber.getLastImage(image)) {
     //   renderer.render(image, autopilot.droneStatus(), autopilot.getBatteryLevel());
     // }
-    if(visualInertialTracker.getLastVisualisationImage(visualisationImage)) {
-      renderer.render(visualisationImage, autopilot.droneStatus(), autopilot.getBatteryLevel());
+    if(visualInertialTracker.getLastVisualisationImage(imageWithKeypoints)) {
+      renderer.render(imageWithKeypoints, autopilot.droneStatus(), autopilot.getBatteryLevel());
     }
 
     // Check if keys are pressed and execute associated commands
