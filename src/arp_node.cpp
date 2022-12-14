@@ -5,6 +5,7 @@
 #include <SDL2/SDL.h>
 
 #include <ros/ros.h>
+#include <ros/package.h>
 #include <image_transport/image_transport.h>
 #include <geometry_msgs/TransformStamped.h>
 #include <geometry_msgs/Twist.h>
@@ -19,6 +20,8 @@
 #include <arp/Autopilot.hpp>
 #include <arp/cameras/PinholeCamera.hpp>
 #include <arp/cameras/RadialTangentialDistortion.hpp>
+#include <arp/VisualInertialTracker.hpp>
+#include <arp/StatePublisher.hpp>
 
 #include <Commands.hpp>
 #include <Renderer.hpp>
@@ -28,13 +31,19 @@ class Subscriber
  public:
   EIGEN_MAKE_ALIGNED_OPERATOR_NEW
 
+  Subscriber(arp::VisualInertialTracker* visualInertialTrackerPtr){
+    visualInertialTrackerPtr_ = visualInertialTrackerPtr;
+  }
+
   void imageCallback(const sensor_msgs::ImageConstPtr& msg)
   {
-    uint64_t timeMicroseconds = uint64_t(msg->header.stamp.sec) * 1000000ll
-        + msg->header.stamp.nsec / 1000;
+    // Get time stamp
+    uint64_t timeMicroseconds = uint64_t(msg->header.stamp.sec) * 1000000ll + msg->header.stamp.nsec / 1000;
     // -- for later use
     std::lock_guard<std::mutex> l(imageMutex_);
     lastImage_ = cv_bridge::toCvShare(msg, "bgr8")->image;
+    // Feed image to VisualIntertialTracker
+    visualInertialTrackerPtr_->addImage(timeMicroseconds, lastImage_);
   }
 
   bool getLastImage(cv::Mat& image)
@@ -49,12 +58,23 @@ class Subscriber
 
   void imuCallback(const sensor_msgs::ImuConstPtr& msg)
   {
-    // -- for later use
+    // Get time stamp
+    uint64_t timeMicroseconds = uint64_t(msg->header.stamp.sec) * 1000000ll + msg->header.stamp.nsec / 1000;
+    // Feed IMU measurement to VisualIntertialTracker
+    Eigen::Vector3d omega_S, acc_S;
+    omega_S[0] = msg->angular_velocity.x;
+    omega_S[1] = msg->angular_velocity.y;
+    omega_S[2] = msg->angular_velocity.z;
+    acc_S[0] = msg->linear_acceleration.x;
+    acc_S[1] = msg->linear_acceleration.y;
+    acc_S[2] = msg->linear_acceleration.z;
+    visualInertialTrackerPtr_->addImuMeasurement(timeMicroseconds, omega_S, acc_S);
   }
 
  private:
   cv::Mat lastImage_;
   std::mutex imageMutex_;
+  arp::VisualInertialTracker* visualInertialTrackerPtr_;
 };
 
 int main(int argc, char **argv)
@@ -63,19 +83,11 @@ int main(int argc, char **argv)
   ros::NodeHandle nh;
   image_transport::ImageTransport it(nh);
 
-  // setup inputs
-  Subscriber subscriber;
-  image_transport::Subscriber subImage = it.subscribe(
-      "ardrone/front/image_raw", 2, &Subscriber::imageCallback, &subscriber);
-  ros::Subscriber subImu = nh.subscribe("ardrone/imu", 50,
-                                        &Subscriber::imuCallback, &subscriber);
-
   // set up autopilot
   arp::Autopilot autopilot(nh);
 
-  bool success = true;
-  
   // set up camera model
+  bool success = true;
   double k1, k2, p1, p2, fu, fv, cu, cv;
   int imageWidth, imageHeight;
   success &= nh.getParam("/arp_node/k1", k1);
@@ -99,12 +111,56 @@ int main(int argc, char **argv)
     imageWidth, imageHeight, fu, fv, cu, cv, distortion};
   phc.initialiseUndistortMaps(imageWidth, imageHeight, fu, fv, cu, cv);
 
+  // set up frontend
+  arp::Frontend frontend(imageWidth, imageHeight, fu, fv, cu, cv, k1, k2, p1, p2);
+
+  // load map
+  std::string path = ros::package::getPath("ardrone_practicals");
+  std::string mapFile;
+  if(!nh.getParam("arp_node/map", mapFile)) ROS_FATAL("error loading parameter");
+  std::string mapPath = path+"/maps/"+mapFile;
+  if(!frontend.loadMap(mapPath)) ROS_FATAL_STREAM("could not load map from " << mapPath << " !");
+
+  // state publisher -- provided for rviz visualisation of drone pose:
+  arp::StatePublisher pubState(nh);
+  
+  // set up EKF
+  arp::ViEkf viEkf;
+  Eigen::Matrix4d T_SC_mat;
+  std::vector<double> T_SC_array;
+  if(!nh.getParam("arp_node/T_SC", T_SC_array))
+  ROS_FATAL("error loading parameter");
+  T_SC_mat <<
+  T_SC_array[0], T_SC_array[1], T_SC_array[2], T_SC_array[3],
+  T_SC_array[4], T_SC_array[5], T_SC_array[6], T_SC_array[7],
+  T_SC_array[8], T_SC_array[9], T_SC_array[10], T_SC_array[11],
+  T_SC_array[12], T_SC_array[13], T_SC_array[14], T_SC_array[15];
+  arp::kinematics::Transformation T_SC(T_SC_mat);
+  viEkf.setCameraExtrinsics(T_SC);
+  viEkf.setCameraIntrinsics(frontend.camera());
+
+  // set up visual-inertial tracking
+  arp::VisualInertialTracker visualInertialTracker;
+  visualInertialTracker.setFrontend(frontend);
+  visualInertialTracker.setEstimator(viEkf);
+
+  // set up visualisation: publish poses to topic ardrone/vi_ekf_pose
+  visualInertialTracker.setVisualisationCallback(std::bind(&arp::StatePublisher::publish, &pubState, std::placeholders::_1, std::placeholders::_2));
+
+  // setup inputs
+  Subscriber subscriber(&visualInertialTracker);
+  image_transport::Subscriber subImage = it.subscribe(
+      "ardrone/front/image_raw", 2, &Subscriber::imageCallback, &subscriber);
+  ros::Subscriber subImu = nh.subscribe("ardrone/imu", 50,
+                                        &Subscriber::imuCallback, &subscriber);
+
   // setup rendering
   gui::Renderer renderer{phc};
 
   // enter main event loop
   std::cout << "===== Hello AR Drone ====" << std::endl;
-  cv::Mat image;
+  // cv::Mat image;
+  cv::Mat imageWithKeypoints;
   while (ros::ok()) {
     ros::spinOnce();
     ros::Duration dur(0.04);
@@ -114,8 +170,11 @@ int main(int argc, char **argv)
     }
 
     // render image, if there is a new one available
-    if(subscriber.getLastImage(image)) {
-      renderer.render(image, autopilot.droneStatus(), autopilot.getBatteryLevel());
+    // if(subscriber.getLastImage(image)) {
+    //   renderer.render(image, autopilot.droneStatus(), autopilot.getBatteryLevel());
+    // }
+    if(visualInertialTracker.getLastVisualisationImage(imageWithKeypoints)) {
+      renderer.render(imageWithKeypoints, autopilot.droneStatus(), autopilot.getBatteryLevel());
     }
 
     // Check if keys are pressed and execute associated commands

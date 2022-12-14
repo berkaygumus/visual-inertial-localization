@@ -26,6 +26,22 @@
 
 namespace arp {
 
+void drawKeypointsOnImage(const DetectionVec& detections, const std::vector<cv::KeyPoint> keypoints, const cv::Mat& image, cv::Mat& visualisationImage)
+{
+  // Draw all found keypoints in red.
+  cv::drawKeypoints(image, keypoints, visualisationImage, cv::Scalar(0,0,255));
+  
+  // Draw all matched (and inlier) keypoints in green over the red ones.
+  std::vector<cv::KeyPoint> matchedKeypoints;
+  for (const auto& detection : detections){
+    // cv::drawMarker(visualisationImage, cv::Point2d{detection.keypoint[0],detection.keypoint[1]}, cv::Scalar(0,255,0));
+    cv::KeyPoint matchedKeypoint(detection.keypoint[0], detection.keypoint[1], 1.0);
+    matchedKeypoints.push_back(matchedKeypoint);
+  }
+  cv::drawKeypoints(visualisationImage, matchedKeypoints, visualisationImage, cv::Scalar(0,255,0));
+}
+  
+
 Frontend::Frontend(int imageWidth, int imageHeight,
                                    double focalLengthU, double focalLengthV,
                                    double imageCenterU, double imageCenterV,
@@ -190,7 +206,7 @@ bool Frontend::ransac(const std::vector<cv::Point3d>& worldPoints,
     return false;
   }
   if(worldPoints.size()<5) {
-    return false; // not realiabl enough
+    return false; // not realiable enough
   }
 
   inliers.clear();
@@ -229,8 +245,11 @@ bool Frontend::detectAndMatch(const cv::Mat& image, const Eigen::Vector3d & extr
   cv::Mat descriptors;
   detectAndDescribe(grayScale, extractionDirection, keypoints, descriptors);
 
-  // TODO match to map:
-  const int numPosesToMatch = 3;
+  // match keypoints from current image to landmarks of the map:
+  std::vector<cv::Point2d> matchedImagePoints;
+  std::vector<cv::Point3d> matchedLandmarkPoints;
+  std::vector<uint64_t> matchedLandmarkIDs;
+  const int numPosesToMatch = 3; // increase this number to search in more key frames.
   int checkedPoses = 0;
   for(const auto& lms : landmarks_) { // go through all poses
     for(const auto& lm : lms.second) { // go through all landmarks seen from this pose
@@ -238,7 +257,21 @@ bool Frontend::detectAndMatch(const cv::Mat& image, const Eigen::Vector3d & extr
         uchar* keypointDescriptor = descriptors.data + k*48; // descriptors are 48 bytes long
         const float dist = brisk::Hamming::PopcntofXORed(
               keypointDescriptor, lm.descriptor.data, 3); // compute desc. distance: 3 for 3x128bit (=48 bytes)
-        // TODO check if a match and process accordingly
+        
+        // check if a match and add them to the "matched" vectors.
+        if(dist < 60.0) {
+          // match! add world point of landmark (+ ID) and image point of keypoint the respective vector to use them in ransac.
+          cv::Point2d matchedImagePoint;
+          matchedImagePoint.x = keypoints[k].pt.x;
+          matchedImagePoint.y = keypoints[k].pt.y;
+          matchedImagePoints.push_back(matchedImagePoint);
+          cv::Point3d matchedLandmarkPoint;
+          matchedLandmarkPoint.x = lm.point[0];
+          matchedLandmarkPoint.y = lm.point[1];
+          matchedLandmarkPoint.z = lm.point[2];
+          matchedLandmarkPoints.push_back(matchedLandmarkPoint);
+          matchedLandmarkIDs.push_back(lm.landmarkId);
+        }
       }
     }
     checkedPoses++;
@@ -247,13 +280,27 @@ bool Frontend::detectAndMatch(const cv::Mat& image, const Eigen::Vector3d & extr
     }
   }
 
-  // TODO run RANSAC (to remove outliers and get pose T_CW estimate)
+  // run RANSAC (to remove outliers and get pose T_CW estimate)
+  std::vector<int> inliers;
+  bool ransacSuccess = ransac(matchedLandmarkPoints, matchedImagePoints, T_CW, inliers);
 
-  // TODO set detections
-
-  // TODO visualise by painting stuff into visualisationImage
+  // set detections (only use inliers)
+  for (const auto& ptID : inliers)
+  { 
+    Detection detection;
+    detection.keypoint[0] = matchedImagePoints[ptID].x;
+    detection.keypoint[1] = matchedImagePoints[ptID].y;
+    detection.landmark[0] = matchedLandmarkPoints[ptID].x;
+    detection.landmark[1] = matchedLandmarkPoints[ptID].y;
+    detection.landmark[2] = matchedLandmarkPoints[ptID].z;
+    detection.landmarkId = matchedLandmarkIDs[ptID];
+    detections.push_back(detection);
+  }
   
-  return false; // TODO return true if successful...
+  // visualise by painting keypoints into visualisationImage
+  drawKeypointsOnImage(detections, keypoints, image, visualisationImage);
+  
+  return ransacSuccess; // return true if successful...
 }
 
 }  // namespace arp
