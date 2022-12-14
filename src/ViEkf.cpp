@@ -270,10 +270,10 @@ bool ViEkf::update(const Detection & detection){
   // transform the corner point from world frame into the camera frame
   // (remember the camera projection will assume the point is represented
   // in camera coordinates):
-  auto c_landmark = T_SC_.inverse() * T_WS.inverse() * hp_W;
+  auto landmark_C = T_SC_.inverse() * T_WS.inverse() * hp_W;
   Eigen::Vector2d imagePoint;
   Eigen::Matrix<double, 2, 3> U;
-  cameras::ProjectionStatus projectionStatus = cameraModel_.project(c_landmark.head<3>(), &imagePoint, &U);
+  cameras::ProjectionStatus projectionStatus = cameraModel_.project(landmark_C.head<3>(), &imagePoint, &U);
 
   // check validity of projection -- return false if not successful!
   if (projectionStatus != cameras::ProjectionStatus::Successful) {
@@ -320,7 +320,7 @@ bool ViEkf::update(const Detection & detection){
 
   // perform update (state)
   x_.t_WS = x_.t_WS + deltaChi.head<3>();
-  x_.q_WS = (kinematics::deltaQ(deltaChi.segment<3>(3)) * x_.q_WS);
+  x_.q_WS = kinematics::deltaQ(deltaChi.segment<3>(3)) * x_.q_WS;
   x_.q_WS.normalize();
   x_.v_W = x_.v_W + deltaChi.segment<3>(6);
   x_.b_g = x_.b_g + deltaChi.segment<3>(9);
