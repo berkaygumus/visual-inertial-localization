@@ -178,7 +178,7 @@ int main(int argc, char **argv)
     }
 
     // Check if keys are pressed and execute associated commands
-    Commands::checkKeysForCommand(autopilot, renderer);
+    Commands::checkKeysForCommand(autopilot, renderer, visualInertialTracker);
   }
 
   // make sure to land the drone...
