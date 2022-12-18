@@ -72,15 +72,10 @@ class VisualInertialTracker
   bool getLastVisualisationImage(cv::Mat & visualisationImage);
   
   /// \brief Enable/disable fusion
-  void enableFusion(bool enable) {
-    fusionEnabled_ = enable;
-    std::cout << "fusion enable: " << fusionEnabled_ << std::endl;
-    }
+  void enableFusion(bool enable) {fusionEnabled_ = enable;}
 
   /// \brief get fusionEnabled_
-  bool getEnableFusion() {
-    return fusionEnabled_;
-    }
+  bool isFusionEnabled() {return fusionEnabled_;}
 
  protected:
 

@@ -66,10 +66,15 @@ void checkKeysForCommand(arp::Autopilot& autopilot, gui::Renderer& renderer,  ar
     static bool fusionTogglePending = false;
     if (state[SDL_SCANCODE_E]) {
       fusionTogglePending = true;
-    } 
-    else if (fusionTogglePending) {
-      std::cout << "Toggling enable fusion." << std::endl;
-      visualInertialTracker.enableFusion(!visualInertialTracker.getEnableFusion());
+    } else if (fusionTogglePending) {
+      if(visualInertialTracker.isFusionEnabled()){
+        visualInertialTracker.enableFusion(false);
+        std::cout << "EKF fusion disabled." << std::endl;
+      }
+      else{
+        visualInertialTracker.enableFusion(true);
+        std::cout << "EKF fusion enabled." << std::endl;
+      }
       fusionTogglePending = false;
     }
     

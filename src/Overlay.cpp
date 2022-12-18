@@ -33,13 +33,14 @@ void displayInstructions(cv::Mat& image)
       putText(image, "[<]/[>]: left/right      ", cv::Point(5, image.rows - 10), Color::Blue);
       
       // draw t,l,e control
-      putText(image, "[T]/[L]: takeoff/landing ", cv::Point(image.cols - 250, image.rows - 35), Color::Green);
-      putText(image, "[Esc]: shut-off motors   ", cv::Point(image.cols - 250, image.rows - 10), Color::Red);
+      putText(image, "[T]/[L]: takeoff/landing ", cv::Point(image.cols - 260, image.rows - 35), Color::Green);
+      putText(image, "[Esc]: shut-off motors   ", cv::Point(image.cols - 260, image.rows - 10), Color::Red);
 
       // draw enable/disable undistortion command
-      putText(image, "[K]:undistortion on/off ", cv::Point(image.cols - 250, image.rows - 60), Color::White);
+      putText(image, "[K]: undistortion on/off ", cv::Point(image.cols - 260, image.rows - 60), Color::White);
+      
       // draw enable/disable fusion command
-      putText(image, "[E]:fusion enable/disable ", cv::Point(image.cols - 250, image.rows - 85), Color::White);
+      putText(image, "[E]: fusion enable/disable ", cv::Point(image.cols - 260, image.rows - 85), Color::White);
 }
 
 void displayBattery(cv::Mat& image, float battery)
