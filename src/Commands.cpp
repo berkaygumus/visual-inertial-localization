@@ -20,7 +20,7 @@ void printStatus(const bool success)
     }
 }
 
-void checkKeysForCommand(arp::Autopilot& autopilot, gui::Renderer& renderer)
+void checkKeysForCommand(arp::Autopilot& autopilot, gui::Renderer& renderer,  arp::VisualInertialTracker& visualInertialTracker)
 {
     //Multiple Key Capture Begins
     const Uint8 *state = SDL_GetKeyboardState(NULL);
@@ -61,7 +61,22 @@ void checkKeysForCommand(arp::Autopilot& autopilot, gui::Renderer& renderer)
       renderer.toggleUndistortionBeforeRender();
       distortionTogglePending = false;
     }
-
+    
+    // enable fusion mode on key-up of 'E'
+    static bool fusionTogglePending = false;
+    if (state[SDL_SCANCODE_E]) {
+      fusionTogglePending = true;
+    } else if (fusionTogglePending) {
+      if(visualInertialTracker.isFusionEnabled()){
+        visualInertialTracker.enableFusion(false);
+        std::cout << "EKF fusion disabled." << std::endl;
+      } else {
+        visualInertialTracker.enableFusion(true);
+        std::cout << "EKF fusion enabled." << std::endl;
+      }
+      fusionTogglePending = false;
+    }
+    
     if (droneStatus == autopilot.Flying || droneStatus == autopilot.Hovering || droneStatus == autopilot.Flying2) {
         // Compute manual move values.
         double forward = state[SDL_SCANCODE_UP]   - state[SDL_SCANCODE_DOWN];
