@@ -70,8 +70,7 @@ void checkKeysForCommand(arp::Autopilot& autopilot, gui::Renderer& renderer,  ar
       if(visualInertialTracker.isFusionEnabled()){
         visualInertialTracker.enableFusion(false);
         std::cout << "EKF fusion disabled." << std::endl;
-      }
-      else{
+      } else {
         visualInertialTracker.enableFusion(true);
         std::cout << "EKF fusion enabled." << std::endl;
       }
