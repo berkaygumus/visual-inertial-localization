@@ -74,6 +74,9 @@ class VisualInertialTracker
   /// \brief Enable/disable fusion
   void enableFusion(bool enable) {fusionEnabled_ = enable;}
 
+  /// \brief get fusionEnabled_
+  bool isFusionEnabled() {return fusionEnabled_;}
+
  protected:
 
   /// \brief This runs in a separate thread, synchronising and then calling
