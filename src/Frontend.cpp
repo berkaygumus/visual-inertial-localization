@@ -155,6 +155,7 @@ bool  Frontend::loadMap(std::string path) {
           std::stringstream(descriptorstring.substr(2*col,2)) >> std::hex >> byte;
           landmark.descriptor.at<uchar>(0,col) = byte;
         }
+        landmark.landmarkId = landmarkId; // TODO: currently not needed, maybe in later practical (see also line 297). Maybe also keypointIdx.
         lmIds.insert(landmarkId);
         landmarks.push_back(landmark);
       }      
@@ -293,7 +294,7 @@ bool Frontend::detectAndMatch(const cv::Mat& image, const Eigen::Vector3d & extr
     detection.landmark[0] = matchedLandmarkPoints[ptID].x;
     detection.landmark[1] = matchedLandmarkPoints[ptID].y;
     detection.landmark[2] = matchedLandmarkPoints[ptID].z;
-    detection.landmarkId = matchedLandmarkIDs[ptID];
+    detection.landmarkId = matchedLandmarkIDs[ptID]; // TODO: currently not needed, maybe in later practical (see also line 158)
     detections.push_back(detection);
   }
   
