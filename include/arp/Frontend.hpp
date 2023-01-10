@@ -59,6 +59,10 @@ class Frontend
   /// \return True on success.
   bool loadDBoW2Voc(std::string path);
 
+  /// \brief Builds a database from the vocabulary
+  /// \return True on success.
+  bool buildDBoW2Database();
+
   /// \brief Detect and match keypoints in image that can be fed to an estimator.
   /// \warning If not returning true, there may still be detections, but not verified
   ///          and T_CW will be invalid.
@@ -115,6 +119,7 @@ class Frontend
 
   FBriskVocabulary dBowVocabulary_; ///< The BRISK DBoW vocabulary -- load from disk.
   FBriskDatabase dBowDatabase_;   ///< The DBoW database to add frames to.
+  std::map<DBoW2::EntryId, uint64_t> posesByDBoWEntry_; ///< A map that keeps track of a likely pose at a certain place.
 
  private:
   Frontend() = delete;

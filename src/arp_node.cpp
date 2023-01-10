@@ -121,6 +121,11 @@ int main(int argc, char **argv)
   if(!nh.getParam("arp_node/map", mapFile)) ROS_FATAL("error loading parameter");
   std::string mapPath = path+"/maps/"+mapFile;
   if(!frontend.loadMap(mapPath)) ROS_FATAL_STREAM("could not load map from " << mapPath << " !");
+  
+  // load DBoW2 vocabulary
+  std::string vocPath = path+"/maps/small_voc.yml.gz";
+  if(!frontend.loadDBoW2Voc(vocPath)) ROS_FATAL_STREAM("could not load DBoW2 voc. from " << vocPath << " !");
+  if(!frontend.buildDBoW2Database()) ROS_FATAL_STREAM("Could not build DBoW2 database from vocabulary.");
 
   // state publisher -- provided for rviz visualisation of drone pose:
   arp::StatePublisher pubState(nh);

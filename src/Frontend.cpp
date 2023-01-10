@@ -192,9 +192,36 @@ bool Frontend::loadDBoW2Voc(std::string path) {
   return true; 
 }
 
+// TODO TEMP
+DBoW2::FBrisk::TDescriptor transformDescriptor(const cv::Mat& descriptor)
+{
+  DBoW2::FBrisk::TDescriptor newDescriptor{48};
+  for (size_t i = 0; i < 48; i++) {
+    newDescriptor.push_back(descriptor.at<unsigned char>(0, i));
+  }
+  return newDescriptor;
+}
+// END TEMP
+
+bool Frontend::buildDBoW2Database()
+{
+  // std::vector<DBoW2::FBrisk::TDescriptor> features;
+  for (const std::pair<uint64_t, LandmarkVec>& lmByPose : landmarks_)  {
+    std::vector<DBoW2::FBrisk::TDescriptor> features;
+    for (const Landmark& lm : lmByPose.second) {
+      features.push_back(transformDescriptor(lm.descriptor));
+    }
+    DBoW2::EntryId newId = dBowDatabase_.add(features);
+    posesByDBoWEntry_.insert({newId, lmByPose.first});
+  }
+
+  return true;
+}
+
 int Frontend::detectAndDescribe(
-    const cv::Mat& grayscaleImage, const Eigen::Vector3d& extractionDirection,
-    std::vector<cv::KeyPoint>& keypoints, cv::Mat& descriptors) const {
+    const cv::Mat &grayscaleImage, const Eigen::Vector3d &extractionDirection,
+    std::vector<cv::KeyPoint> &keypoints, cv::Mat &descriptors) const
+{
 
   // run BRISK detector
   detector_->detect(grayscaleImage, keypoints);
@@ -273,10 +300,19 @@ bool Frontend::detectAndMatch(const cv::Mat& image, const Eigen::Vector3d & extr
   std::vector<cv::Point2d> matchedImagePoints;
   std::vector<cv::Point3d> matchedLandmarkPoints;
   std::vector<uint64_t> matchedLandmarkIDs;
-  const int numPosesToMatch = 3; // increase this number to search in more key frames.
-  int checkedPoses = 0;
-  for(const auto& lms : landmarks_) { // go through all poses
-    for(const auto& lm : lms.second) { // go through all landmarks seen from this pose
+
+  // find similar keyframes to only search potentially visible landmarks
+  std::vector<DBoW2::FBrisk::TDescriptor> features;
+  for (size_t i = 0; i < descriptors.rows; i++) {
+    features.push_back(transformDescriptor(descriptors.row(i)));
+  }
+  DBoW2::QueryResults dBoWResults;
+  dBowDatabase_.query(features, dBoWResults, -1);
+
+  for (const auto& result : dBoWResults) {
+    const uint64_t poseId = posesByDBoWEntry_.at(result.Id);
+    const LandmarkVec relevantLandmarks = landmarks_.at(poseId);
+    for(const auto& lm : relevantLandmarks) { // go through all landmarks seen from this pose
       for(size_t k = 0; k < keypoints.size(); ++k) { // go through all keypoints in the frame
         uchar* keypointDescriptor = descriptors.data + k*48; // descriptors are 48 bytes long
         const float dist = brisk::Hamming::PopcntofXORed(
@@ -298,10 +334,10 @@ bool Frontend::detectAndMatch(const cv::Mat& image, const Eigen::Vector3d & extr
         }
       }
     }
-    checkedPoses++;
-    if(checkedPoses>=numPosesToMatch) {
-      break;
-    }
+    // checkedPoses++;
+    // if(checkedPoses>=numPosesToMatch) {
+      // break;
+    // }
   }
 
   // run RANSAC (to remove outliers and get pose T_CW estimate)
