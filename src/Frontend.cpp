@@ -169,7 +169,7 @@ bool  Frontend::loadMap(std::string path) {
           std::stringstream(descriptorstring.substr(2*col,2)) >> std::hex >> byte;
           landmark.descriptor.at<uchar>(0,col) = byte;
         }
-        landmark.landmarkId = landmarkId; // TODO: currently not needed, maybe in later practical (see also line 297). Maybe also keypointIdx.
+        landmark.landmarkId = landmarkId;
         lmIds.insert(landmarkId);
         landmarks.push_back(landmark);
       }      
@@ -192,7 +192,6 @@ bool Frontend::loadDBoW2Voc(std::string path) {
   return true; 
 }
 
-// TODO TEMP
 DBoW2::FBrisk::TDescriptor transformDescriptor(const cv::Mat& descriptor)
 {
   DBoW2::FBrisk::TDescriptor newDescriptor{48};
@@ -201,7 +200,6 @@ DBoW2::FBrisk::TDescriptor transformDescriptor(const cv::Mat& descriptor)
   }
   return newDescriptor;
 }
-// END TEMP
 
 bool Frontend::buildDBoW2Database()
 {
@@ -281,6 +279,11 @@ bool Frontend::ransac(const std::vector<cv::Point3d>& worldPoints,
   return ransacSuccess && (double(inliers.size())/double(imagePoints.size()) > 0.7);
 }
 
+void reInitialise()
+{
+
+}
+
 bool Frontend::detectAndMatch(const cv::Mat& image, const Eigen::Vector3d & extractionDirection, 
                               DetectionVec & detections, kinematics::Transformation & T_CW, 
                               cv::Mat & visualisationImage, bool needsReInitialisation)
@@ -296,24 +299,61 @@ bool Frontend::detectAndMatch(const cv::Mat& image, const Eigen::Vector3d & extr
   cv::Mat descriptors;
   detectAndDescribe(grayScale, extractionDirection, keypoints, descriptors);
 
-  // match keypoints from current image to landmarks of the map:
+  // IDs of keyframes to search
+  std::vector<uint64_t> keyframeIds;
+
+  if (lost_) {
+
+    // std::cout << "lost = true" << std::endl;
+    // find similar keyframes to only search potentially visible landmarks
+    std::vector<DBoW2::FBrisk::TDescriptor> features;
+    for (size_t i = 0; i < descriptors.rows; i++) {
+      features.push_back(transformDescriptor(descriptors.row(i)));
+    }
+
+    // based on the features, run place recognition using BoW db query
+    DBoW2::QueryResults dBoWResults;
+    dBowDatabase_.query(features, dBoWResults, -1);
+    for (const DBoW2::Result& result : dBoWResults) {
+      keyframeIds.push_back(posesByDBoWEntry_.at(result.Id));
+    }
+
+  }  else {
+
+    // look at current keyframe and covisibilities
+    const std::set<uint64_t>& covisibilities = covisibilities_.at(activeKeyframe_);
+    keyframeIds.insert(std::end(keyframeIds), std::begin(covisibilities), std::end(covisibilities));
+    // std::cout << "Looking at " << keyframeIds.size() << " covisible frames."  << std::endl;
+    
+  }
+
+  // Match against landmarks in gathered keyframe IDs and infer live frame from number of matches
   std::vector<cv::Point2d> matchedImagePoints;
   std::vector<cv::Point3d> matchedLandmarkPoints;
   std::vector<uint64_t> matchedLandmarkIDs;
+  unsigned int mostMatches = 0;
+  uint64_t frameWithMostMatches = 0;
 
-  // find similar keyframes to only search potentially visible landmarks
-  std::vector<DBoW2::FBrisk::TDescriptor> features;
-  for (size_t i = 0; i < descriptors.rows; i++) {
-    features.push_back(transformDescriptor(descriptors.row(i)));
-  }
-  DBoW2::QueryResults dBoWResults;
-  dBowDatabase_.query(features, dBoWResults, -1);
+  // go through all poses
+  for (const auto& pose : keyframeIds) {
+    const LandmarkVec relevantLandmarks = landmarks_.at(pose);
+    unsigned int matches = 0;
 
-  for (const auto& result : dBoWResults) {
-    const uint64_t poseId = posesByDBoWEntry_.at(result.Id);
-    const LandmarkVec relevantLandmarks = landmarks_.at(poseId);
-    for(const auto& lm : relevantLandmarks) { // go through all landmarks seen from this pose
-      for(size_t k = 0; k < keypoints.size(); ++k) { // go through all keypoints in the frame
+    // go through all landmarks seen from this pose
+    for(const auto& lm : relevantLandmarks) {
+
+      // the pose prior T_CW is valid if needsReInitialisation is false
+      if (!needsReInitialisation) {
+        // "rule out potential matches if the landmarks are not projecting into the live frame"
+        Eigen::Vector2d imagePoint;
+        auto status = camera_.project(T_CW * lm.point, &imagePoint);
+        if (status != arp::cameras::ProjectionStatus::Successful) { 
+          continue;
+        }
+      }
+
+      // go through all keypoints in the frame
+      for(size_t k = 0; k < keypoints.size(); ++k) { 
         uchar* keypointDescriptor = descriptors.data + k*48; // descriptors are 48 bytes long
         const float dist = brisk::Hamming::PopcntofXORed(
               keypointDescriptor, lm.descriptor.data, 3); // compute desc. distance: 3 for 3x128bit (=48 bytes)
@@ -321,6 +361,7 @@ bool Frontend::detectAndMatch(const cv::Mat& image, const Eigen::Vector3d & extr
         // check if a match and add them to the "matched" vectors.
         if(dist < 60.0) {
           // match! add world point of landmark (+ ID) and image point of keypoint the respective vector to use them in ransac.
+          matches += 1;
           cv::Point2d matchedImagePoint;
           matchedImagePoint.x = keypoints[k].pt.x;
           matchedImagePoint.y = keypoints[k].pt.y;
@@ -333,11 +374,25 @@ bool Frontend::detectAndMatch(const cv::Mat& image, const Eigen::Vector3d & extr
           matchedLandmarkIDs.push_back(lm.landmarkId);
         }
       }
+
     }
-    // checkedPoses++;
-    // if(checkedPoses>=numPosesToMatch) {
-      // break;
-    // }
+
+    if (matches > mostMatches) {
+      mostMatches = matches;
+      frameWithMostMatches = pose;
+    }
+  }
+
+  // If we found any matches, set the new active keyframe. Otherwise, we must re-localize 
+  // using the BoW place recognition in the next call to detectAndMatch
+  if (mostMatches != 0) {
+    activeKeyframe_ = frameWithMostMatches;
+    std::cout << "Found some matches, active key frame: " << activeKeyframe_ << ", matches: " << mostMatches << std::endl;
+    lost_ = false;
+  } else {
+    std::cout << "We are lost lmao." << std::endl;
+    lost_ = true;
+    return false;
   }
 
   // run RANSAC (to remove outliers and get pose T_CW estimate)
@@ -353,7 +408,7 @@ bool Frontend::detectAndMatch(const cv::Mat& image, const Eigen::Vector3d & extr
     detection.landmark[0] = matchedLandmarkPoints[ptID].x;
     detection.landmark[1] = matchedLandmarkPoints[ptID].y;
     detection.landmark[2] = matchedLandmarkPoints[ptID].z;
-    detection.landmarkId = matchedLandmarkIDs[ptID]; // TODO: currently not needed, maybe in later practical (see also line 158)
+    detection.landmarkId = matchedLandmarkIDs[ptID];
     detections.push_back(detection);
   }
   

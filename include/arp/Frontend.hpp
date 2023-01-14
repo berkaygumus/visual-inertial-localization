@@ -121,6 +121,9 @@ class Frontend
   FBriskDatabase dBowDatabase_;   ///< The DBoW database to add frames to.
   std::map<DBoW2::EntryId, uint64_t> posesByDBoWEntry_; ///< A map that keeps track of a likely pose at a certain place.
 
+  uint64_t activeKeyframe_;  ///< The most likely keyframe at any given point in time.
+  bool lost_{true}; ///< Whether or not the last ransac succeeded. Determins whether we need to re-localize.
+
  private:
   Frontend() = delete;
 };
