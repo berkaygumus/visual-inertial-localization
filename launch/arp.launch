@@ -33,6 +33,9 @@
   </node>
   <!-- Launch estimator / control arp_node. -->
   <node name="arp_node" pkg="ardrone_practicals" type="arp_node" output="screen">
+    <!-- Frontend parameters -->
+    <param name="min_matches" value="10" />
+    <param name="max_bow_results" value="50" />
     <!-- Camera parameters-->
     <param name="image_width" value="640" />
     <param name="image_height" value="360" />

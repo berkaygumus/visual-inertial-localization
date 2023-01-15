@@ -27,6 +27,11 @@
 
 namespace arp {
 
+struct FrontendThresholds {
+  int minMatches;
+  int maxBoWResults;
+};
+
 ///\brief This class processes an image and returns the detected marker poses.
 class Frontend
 {
@@ -44,10 +49,12 @@ class Frontend
   /// \parameter k2 2nd radial distortion parameter. 
   /// \parameter p1 1st tangential distortion parameter.
   /// \parameter p2 2nd tangential distortion parameter.
+  /// \parameter mapCamFocalLength The focal length of the camera that was used to build the map.
   Frontend(int imageWidth, int imageHeight, double focalLengthU,
                            double focalLengthV, double imageCenterU,
                            double imageCenterV, double k1, double k2, double p1,
-                           double p2);
+                           double p2, double mapCamFocalLength,
+                           FrontendThresholds thresholds);
 
   /// \brief Load the map
   /// \parameter path The full path to the map file.
@@ -116,6 +123,8 @@ class Frontend
   typedef DBoW2::TemplatedVocabulary<DBoW2::FBrisk::TDescriptor, DBoW2::FBrisk> FBriskVocabulary;
   /// \brief DBoW for loop closure: BRISK Database.
   typedef DBoW2::TemplatedDatabase<DBoW2::FBrisk::TDescriptor, DBoW2::FBrisk> FBriskDatabase;
+
+  FrontendThresholds thresholds_;
 
   FBriskVocabulary dBowVocabulary_; ///< The BRISK DBoW vocabulary -- load from disk.
   FBriskDatabase dBowDatabase_;   ///< The DBoW database to add frames to.

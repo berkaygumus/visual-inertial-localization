@@ -45,10 +45,13 @@ void drawKeypointsOnImage(const DetectionVec& detections, const std::vector<cv::
 Frontend::Frontend(int imageWidth, int imageHeight,
                                    double focalLengthU, double focalLengthV,
                                    double imageCenterU, double imageCenterV,
-                                   double k1, double k2, double p1, double p2) :
+                                   double k1, double k2, double p1, double p2,
+                                   double mapCamFocalLength,
+                                   FrontendThresholds thresholds) :
   camera_(imageWidth, imageHeight, focalLengthU, focalLengthV, imageCenterU,
           imageCenterV,
-          arp::cameras::RadialTangentialDistortion(k1, k2, p1, p2))
+          arp::cameras::RadialTangentialDistortion(k1, k2, p1, p2)),
+  thresholds_(std::move(thresholds))
 {
   camera_.initialiseUndistortMaps();
 
@@ -66,7 +69,8 @@ Frontend::Frontend(int imageWidth, int imageHeight,
   distCoeffs_.at<double>(3) = p2;
   
   // BRISK detector and descriptor
-  detector_.reset(new brisk::ScaleSpaceFeatureDetector<brisk::HarrisScoreCalculator>(10, 0, 100, 2000));
+  // detector_.reset(new brisk::ScaleSpaceFeatureDetector<brisk::HarrisScoreCalculator>(10, 0, 100, 2000));
+  detector_.reset(new brisk::ScaleSpaceFeatureDetector<brisk::HarrisScoreCalculator>(20, 0, 100, 1500));
   extractor_.reset(new brisk::BriskDescriptorExtractor(true, false));
   
   // leverage camera-aware BRISK (caution: needs the *_new* maps...)
@@ -96,7 +100,7 @@ Frontend::Frontend(int imageWidth, int imageHeight,
       }
     }
   }
-  std::static_pointer_cast<cv::BriskDescriptorExtractor>(extractor_)->setCameraProperties(rays, imageJacobians, 185.6909);
+  std::static_pointer_cast<cv::BriskDescriptorExtractor>(extractor_)->setCameraProperties(rays, imageJacobians, mapCamFocalLength);
 }
 
 bool  Frontend::loadMap(std::string path) {
@@ -296,6 +300,9 @@ bool Frontend::detectAndMatch(const cv::Mat& image, const Eigen::Vector3d & extr
 
   // IDs of keyframes to search
   std::vector<uint64_t> keyframeIds;
+  if (!lost_) {
+    keyframeIds.push_back(activeKeyframe_);
+  }
 
   if (lost_) {
 
@@ -308,11 +315,9 @@ bool Frontend::detectAndMatch(const cv::Mat& image, const Eigen::Vector3d & extr
 
     // based on the features, run place recognition using BoW db query
     DBoW2::QueryResults dBoWResults;
-    dBowDatabase_.query(features, dBoWResults, -1);
+    dBowDatabase_.query(features, dBoWResults, thresholds_.maxBoWResults);
     for (const DBoW2::Result& result : dBoWResults) {
-      if (result.Score > 0.25) {
-        keyframeIds.push_back(posesByDBoWEntry_.at(result.Id));
-      }
+      keyframeIds.push_back(posesByDBoWEntry_.at(result.Id));
     }
 
   }  else {
@@ -380,9 +385,9 @@ bool Frontend::detectAndMatch(const cv::Mat& image, const Eigen::Vector3d & extr
     }
   }
 
-  // If we found any matches, set the new active keyframe. Otherwise, we must re-localize 
-  // using the BoW place recognition in the next call to detectAndMatch
-  if (mostMatches != 0) {
+  // If we found a sufficient number of matches, set the new active keyframe. Otherwise, we 
+  // must re-localize  using the BoW place recognition in the next call to detectAndMatch
+  if (mostMatches > thresholds_.minMatches) {
     activeKeyframe_ = frameWithMostMatches;
     std::cout << "Found some matches, active key frame: " << activeKeyframe_ << ", matches: " << mostMatches << std::endl;
     lost_ = false;
@@ -412,7 +417,9 @@ bool Frontend::detectAndMatch(const cv::Mat& image, const Eigen::Vector3d & extr
   // visualise by painting keypoints into visualisationImage
   drawKeypointsOnImage(detections, keypoints, image, visualisationImage);
   
-  return ransacSuccess; // return true if successful...
+  // We can use the RANSAC result without the outlier rejection,
+  // but only if we don't need to reintialize.
+  return !needsReInitialisation || ransacSuccess;
 }
 
 }  // namespace arp

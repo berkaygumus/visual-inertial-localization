@@ -18,7 +18,11 @@
     <remap from="ardrone/reset" to="drone/reset"/>
     <remap from="ardrone/land" to="drone/land"/> 
     <remap from="ardrone/navdata" to="drone/navdata"/> 
+    <!-- Frontend parameters -->
+    <param name="min_matches" value="10" />
+    <param name="max_bow_results" value="30" />
     <!-- Camera parameters-->
+    <param name="map_camera_focal_length" value="185.6909" />
     <param name="image_width" value="640" />
     <param name="image_height" value="360" />
     <param name="fu" value="185.6909" />
