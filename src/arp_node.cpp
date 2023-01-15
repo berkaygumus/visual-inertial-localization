@@ -25,6 +25,7 @@
 
 #include <Commands.hpp>
 #include <Renderer.hpp>
+#include <arp/Frontend.hpp>
 
 class Subscriber
 {
