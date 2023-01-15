@@ -300,9 +300,6 @@ bool Frontend::detectAndMatch(const cv::Mat& image, const Eigen::Vector3d & extr
 
   // IDs of keyframes to search
   std::vector<uint64_t> keyframeIds;
-  if (!lost_) {
-    keyframeIds.push_back(activeKeyframe_);
-  }
 
   if (lost_) {
 
@@ -323,6 +320,7 @@ bool Frontend::detectAndMatch(const cv::Mat& image, const Eigen::Vector3d & extr
   }  else {
 
     // look at current keyframe and covisibilities
+    keyframeIds.push_back(activeKeyframe_);
     const std::set<uint64_t>& covisibilities = covisibilities_.at(activeKeyframe_);
     keyframeIds.insert(std::end(keyframeIds), std::begin(covisibilities), std::end(covisibilities));
     // std::cout << "Looking at " << keyframeIds.size() << " covisible frames."  << std::endl;

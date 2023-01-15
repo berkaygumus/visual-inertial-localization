@@ -27,9 +27,10 @@
 
 namespace arp {
 
+/// \brief Thresholds for localization and frame matching logic.
 struct FrontendThresholds {
-  int minMatches;
-  int maxBoWResults;
+  int minMatches; ///< The minimum number of matches in a frame to not consider the drone lost.
+  int maxBoWResults; ///< The maximum number of query results to return from the BoW.
 };
 
 ///\brief This class processes an image and returns the detected marker poses.
@@ -124,14 +125,14 @@ class Frontend
   /// \brief DBoW for loop closure: BRISK Database.
   typedef DBoW2::TemplatedDatabase<DBoW2::FBrisk::TDescriptor, DBoW2::FBrisk> FBriskDatabase;
 
-  FrontendThresholds thresholds_;
+  FrontendThresholds thresholds_; ///< Thresholds and parameters for localization and frame matching.
 
   FBriskVocabulary dBowVocabulary_; ///< The BRISK DBoW vocabulary -- load from disk.
   FBriskDatabase dBowDatabase_;   ///< The DBoW database to add frames to.
   std::map<DBoW2::EntryId, uint64_t> posesByDBoWEntry_; ///< A map that keeps track of a likely pose at a certain place.
 
   uint64_t activeKeyframe_;  ///< The most likely keyframe at any given point in time.
-  bool lost_{true}; ///< Whether or not the last ransac succeeded. Determins whether we need to re-localize.
+  bool lost_{true}; ///< Whether or not cam footage was matched against a keyframe in the last loop.
 
  private:
   Frontend() = delete;
