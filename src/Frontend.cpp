@@ -310,7 +310,9 @@ bool Frontend::detectAndMatch(const cv::Mat& image, const Eigen::Vector3d & extr
     DBoW2::QueryResults dBoWResults;
     dBowDatabase_.query(features, dBoWResults, -1);
     for (const DBoW2::Result& result : dBoWResults) {
-      keyframeIds.push_back(posesByDBoWEntry_.at(result.Id));
+      if (result.Score > 0.25) {
+        keyframeIds.push_back(posesByDBoWEntry_.at(result.Id));
+      }
     }
 
   }  else {
