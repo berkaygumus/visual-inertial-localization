@@ -69,7 +69,7 @@ Frontend::Frontend(int imageWidth, int imageHeight,
   distCoeffs_.at<double>(3) = p2;
   
   // BRISK detector and descriptor
-  detector_.reset(new brisk::ScaleSpaceFeatureDetector<brisk::HarrisScoreCalculator>(10, 0, 100, 2000));
+  detector_.reset(new brisk::ScaleSpaceFeatureDetector<brisk::HarrisScoreCalculator>(35, 5, 70, 750));
   extractor_.reset(new brisk::BriskDescriptorExtractor(true, false));
   
   // leverage camera-aware BRISK (caution: needs the *_new* maps...)
@@ -391,24 +391,25 @@ bool Frontend::detectAndMatch(const cv::Mat& image, const Eigen::Vector3d & extr
   } else {
     std::cout << "We are lost lmao." << std::endl;
     lost_ = true;
-    return false;
   }
 
   // run RANSAC (to remove outliers and get pose T_CW estimate)
   std::vector<int> inliers;
   bool ransacSuccess = ransac(matchedLandmarkPoints, matchedImagePoints, T_CW, inliers);
 
-  // set detections (only use inliers)
-  for (const auto& ptID : inliers)
-  { 
-    Detection detection;
-    detection.keypoint[0] = matchedImagePoints[ptID].x;
-    detection.keypoint[1] = matchedImagePoints[ptID].y;
-    detection.landmark[0] = matchedLandmarkPoints[ptID].x;
-    detection.landmark[1] = matchedLandmarkPoints[ptID].y;
-    detection.landmark[2] = matchedLandmarkPoints[ptID].z;
-    detection.landmarkId = matchedLandmarkIDs[ptID];
-    detections.push_back(detection);
+  if (!lost_) {
+    // set detections (only use inliers)
+    for (const auto& ptID : inliers)
+    { 
+      Detection detection;
+      detection.keypoint[0] = matchedImagePoints[ptID].x;
+      detection.keypoint[1] = matchedImagePoints[ptID].y;
+      detection.landmark[0] = matchedLandmarkPoints[ptID].x;
+      detection.landmark[1] = matchedLandmarkPoints[ptID].y;
+      detection.landmark[2] = matchedLandmarkPoints[ptID].z;
+      detection.landmarkId = matchedLandmarkIDs[ptID];
+      detections.push_back(detection);
+    }
   }
   
   // visualise by painting keypoints into visualisationImage
