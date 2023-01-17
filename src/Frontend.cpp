@@ -289,6 +289,19 @@ bool Frontend::ransac(const std::vector<cv::Point3d>& worldPoints,
   return ransacSuccess && (double(inliers.size())/double(imagePoints.size()) > 0.7);
 }
 
+/// \brief Helper function to wrap image and landmark data in a Detection struct.
+Detection createDetectionFromMatchedData(const cv::Point2d& imagePoint, const cv::Point3d& landmark, size_t landmarkId)
+{
+  Detection detection;
+  detection.keypoint[0] = imagePoint.x;
+  detection.keypoint[1] = imagePoint.y;
+  detection.landmark[0] = landmark.x;
+  detection.landmark[1] = landmark.y;
+  detection.landmark[2] = landmark.z;
+  detection.landmarkId = landmarkId;
+  return detection;
+}
+
 bool Frontend::detectAndMatch(const cv::Mat& image, const Eigen::Vector3d & extractionDirection, 
                               DetectionVec & detections, kinematics::Transformation & T_CW, 
                               cv::Mat & visualisationImage, bool needsReInitialisation)
@@ -407,29 +420,13 @@ bool Frontend::detectAndMatch(const cv::Mat& image, const Eigen::Vector3d & extr
 
   if(ransacSuccess) {
     // set detections (only use inliers)
-    for (const auto& ptID : inliers)
-    { 
-      Detection detection;
-      detection.keypoint[0] = matchedImagePoints[ptID].x;
-      detection.keypoint[1] = matchedImagePoints[ptID].y;
-      detection.landmark[0] = matchedLandmarkPoints[ptID].x;
-      detection.landmark[1] = matchedLandmarkPoints[ptID].y;
-      detection.landmark[2] = matchedLandmarkPoints[ptID].z;
-      detection.landmarkId = matchedLandmarkIDs[ptID];
-      detections.push_back(detection);
+    for (const auto& ptID : inliers) {
+      detections.push_back(createDetectionFromMatchedData(matchedImagePoints[ptID], matchedLandmarkPoints[ptID], matchedLandmarkIDs[ptID]));
     }
   } else {
     // set detections (all, because ransac failed but we have enough matched keypoints)
-    for (int i = 0; i < matchedImagePoints.size(); i++)
-    { 
-      Detection detection;
-      detection.keypoint[0] = matchedImagePoints[i].x;
-      detection.keypoint[1] = matchedImagePoints[i].y;
-      detection.landmark[0] = matchedLandmarkPoints[i].x;
-      detection.landmark[1] = matchedLandmarkPoints[i].y;
-      detection.landmark[2] = matchedLandmarkPoints[i].z;
-      detection.landmarkId = matchedLandmarkIDs[i];
-      detections.push_back(detection);
+    for (int i = 0; i < matchedImagePoints.size(); i++) { 
+      detections.push_back(createDetectionFromMatchedData(matchedImagePoints[i], matchedLandmarkPoints[i], matchedLandmarkIDs[i]));
     }
   }
 
