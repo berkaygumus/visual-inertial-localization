@@ -33,6 +33,9 @@
   </node>
   <!-- Launch estimator / control arp_node. -->
   <node name="arp_node" pkg="ardrone_practicals" type="arp_node" output="screen">
+    <!-- Frontend parameters -->
+    <param name="min_matches" value="10" />
+    <param name="max_bow_results" value="50" />
     <!-- Camera parameters-->
     <param name="image_width" value="640" />
     <param name="image_height" value="360" />
@@ -44,5 +47,12 @@
     <param name="k2" value="0.361622" />
     <param name="p1" value="-0.011630" />
     <param name="p2" value="-0.001178" />
+    <!-- BRISK detector parameters -->
+    <param name="uniformity_radius" value="35" />
+    <param name="octaves" value="5" />
+    <param name="absolute_threshold" value="70" />
+    <param name="max_num_kpt" value="1000" />
+    <!-- We are not loading a map but we need the param for the startup to succeed -->
+    <param name="map_camera_focal_length" value="0" />
   </node>
 </launch>

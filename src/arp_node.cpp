@@ -25,6 +25,7 @@
 
 #include <Commands.hpp>
 #include <Renderer.hpp>
+#include <arp/Frontend.hpp>
 
 class Subscriber
 {
@@ -112,7 +113,33 @@ int main(int argc, char **argv)
   phc.initialiseUndistortMaps(imageWidth, imageHeight, fu, fv, cu, cv);
 
   // set up frontend
-  arp::Frontend frontend(imageWidth, imageHeight, fu, fv, cu, cv, k1, k2, p1, p2);
+  success = true;
+  double mapCamFocalLength;
+  arp::FrontendThresholds thresholds;
+  arp::FeatureDetectionParams featureDetectionParams;
+  success &= nh.getParam("/arp_node/map_camera_focal_length", mapCamFocalLength);
+  // frame matching
+  success &= nh.getParam("/arp_node/min_matches", thresholds.minMatches);
+  success &= nh.getParam("/arp_node/max_bow_results", thresholds.maxBoWResults);
+  // feature detection
+  success &= nh.getParam("/arp_node/uniformity_radius", featureDetectionParams.uniformityRadius);
+  success &= nh.getParam("/arp_node/octaves", featureDetectionParams.octaves);
+  success &= nh.getParam("/arp_node/absolute_threshold", featureDetectionParams.absoluteThreshold);
+  success &= nh.getParam("/arp_node/max_num_kpt", featureDetectionParams.maxNumKpt);
+  std::cout << "frontend: min_num_matches="  << thresholds.minMatches 
+            << ", num_dbow_results=" << thresholds.maxBoWResults << std::endl;
+  std::cout << "detector: uniformity_radius="  << featureDetectionParams.uniformityRadius 
+            << ", octaves=" << featureDetectionParams.octaves 
+            << ", absolute_threshold=" << featureDetectionParams.absoluteThreshold 
+            << ", max_num_kpt=" << featureDetectionParams.maxNumKpt << std::endl;
+  if (!success) {
+    ROS_ERROR("Error reading frontend parameters.");
+    return -1;
+  }
+  arp::Frontend frontend(imageWidth, imageHeight, 
+                         fu, fv, cu, cv, k1, k2, p1, p2,
+                         mapCamFocalLength, 
+                         thresholds, featureDetectionParams);
 
   // load map
   std::string path = ros::package::getPath("ardrone_practicals");
@@ -120,6 +147,11 @@ int main(int argc, char **argv)
   if(!nh.getParam("arp_node/map", mapFile)) ROS_FATAL("error loading parameter");
   std::string mapPath = path+"/maps/"+mapFile;
   if(!frontend.loadMap(mapPath)) ROS_FATAL_STREAM("could not load map from " << mapPath << " !");
+  
+  // load DBoW2 vocabulary
+  std::string vocPath = path+"/maps/small_voc.yml.gz";
+  if(!frontend.loadDBoW2Voc(vocPath)) ROS_FATAL_STREAM("could not load DBoW2 voc. from " << vocPath << " !");
+  if(!frontend.buildDBoW2Database()) ROS_FATAL_STREAM("Could not build DBoW2 database from vocabulary.");
 
   // state publisher -- provided for rviz visualisation of drone pose:
   arp::StatePublisher pubState(nh);
