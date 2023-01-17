@@ -47,11 +47,13 @@ Frontend::Frontend(int imageWidth, int imageHeight,
                                    double imageCenterU, double imageCenterV,
                                    double k1, double k2, double p1, double p2,
                                    double mapCamFocalLength,
-                                   FrontendThresholds thresholds) :
+                                   FrontendThresholds thresholds,
+                                   FeatureDetectionParams featureDetectionParams) :
   camera_(imageWidth, imageHeight, focalLengthU, focalLengthV, imageCenterU,
           imageCenterV,
           arp::cameras::RadialTangentialDistortion(k1, k2, p1, p2)),
-  thresholds_(std::move(thresholds))
+  thresholds_(std::move(thresholds)),
+  featureDetectionParams_(std::move(featureDetectionParams))
 {
   camera_.initialiseUndistortMaps();
 
@@ -69,7 +71,12 @@ Frontend::Frontend(int imageWidth, int imageHeight,
   distCoeffs_.at<double>(3) = p2;
   
   // BRISK detector and descriptor
-  detector_.reset(new brisk::ScaleSpaceFeatureDetector<brisk::HarrisScoreCalculator>(35, 5, 70, 750));
+  // detector_.reset(new brisk::ScaleSpaceFeatureDetector<brisk::HarrisScoreCalculator>(35, 5, 70, 750));
+  detector_.reset(new brisk::ScaleSpaceFeatureDetector<brisk::HarrisScoreCalculator>(
+    featureDetectionParams_.uniformityRadius, 
+    featureDetectionParams_.octaves, 
+    featureDetectionParams_.absoluteThreshold,
+    featureDetectionParams_.maxNumKpt));
   extractor_.reset(new brisk::BriskDescriptorExtractor(true, false));
   
   // leverage camera-aware BRISK (caution: needs the *_new* maps...)

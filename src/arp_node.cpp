@@ -89,8 +89,7 @@ int main(int argc, char **argv)
 
   // set up camera model
   bool success = true;
-  double k1, k2, p1, p2, fu, fv, cu, cv, mapCamFocalLength;
-  arp::FrontendThresholds thresholds;
+  double k1, k2, p1, p2, fu, fv, cu, cv;
   int imageWidth, imageHeight;
   success &= nh.getParam("/arp_node/k1", k1);
   success &= nh.getParam("/arp_node/k2", k2);
@@ -102,13 +101,8 @@ int main(int argc, char **argv)
   success &= nh.getParam("/arp_node/cv", cv);
   success &= nh.getParam("/arp_node/image_width", imageWidth);
   success &= nh.getParam("/arp_node/image_height", imageHeight);
-  success &= nh.getParam("/arp_node/min_matches", thresholds.minMatches);
-  success &= nh.getParam("/arp_node/max_bow_results", thresholds.maxBoWResults);
-  success &= nh.getParam("/arp_node/map_camera_focal_length", mapCamFocalLength);
   std::cout << "k^T = [" << k1 << ", " << k2 << ", " << p1 << ", " << p2 << ", 0]" << std::endl;
   std::cout << "camera: fu="  << fu << ", fv=" << fv << ", cu=" << cu << ", cv=" << cv << std::endl;
-  std::cout << "Thresholds: minMatches=" << thresholds.minMatches
-            << ", maxBoWResults=" << thresholds.maxBoWResults << std::endl;
   if (!success) {
     ROS_ERROR("Error reading camera parameters.");
     return -1;
@@ -119,7 +113,33 @@ int main(int argc, char **argv)
   phc.initialiseUndistortMaps(imageWidth, imageHeight, fu, fv, cu, cv);
 
   // set up frontend
-  arp::Frontend frontend(imageWidth, imageHeight, fu, fv, cu, cv, k1, k2, p1, p2, mapCamFocalLength, thresholds);
+  success = true;
+  double mapCamFocalLength;
+  arp::FrontendThresholds thresholds;
+  arp::FeatureDetectionParams featureDetectionParams;
+  success &= nh.getParam("/arp_node/map_camera_focal_length", mapCamFocalLength);
+  // frame matching
+  success &= nh.getParam("/arp_node/min_matches", thresholds.minMatches);
+  success &= nh.getParam("/arp_node/max_bow_results", thresholds.maxBoWResults);
+  // feature detection
+  success &= nh.getParam("/arp_node/uniformity_radius", featureDetectionParams.uniformityRadius);
+  success &= nh.getParam("/arp_node/octaves", featureDetectionParams.octaves);
+  success &= nh.getParam("/arp_node/absolute_threshold", featureDetectionParams.absoluteThreshold);
+  success &= nh.getParam("/arp_node/max_num_kpt", featureDetectionParams.maxNumKpt);
+  std::cout << "frontend: min_num_matches="  << thresholds.minMatches 
+            << ", num_dbow_results=" << thresholds.maxBoWResults << std::endl;
+  std::cout << "detector: uniformity_radius="  << featureDetectionParams.uniformityRadius 
+            << ", octaves=" << featureDetectionParams.octaves 
+            << ", absolute_threshold=" << featureDetectionParams.absoluteThreshold 
+            << ", max_num_kpt=" << featureDetectionParams.maxNumKpt << std::endl;
+  if (!success) {
+    ROS_ERROR("Error reading frontend parameters.");
+    return -1;
+  }
+  arp::Frontend frontend(imageWidth, imageHeight, 
+                         fu, fv, cu, cv, k1, k2, p1, p2,
+                         mapCamFocalLength, 
+                         thresholds, featureDetectionParams);
 
   // load map
   std::string path = ros::package::getPath("ardrone_practicals");

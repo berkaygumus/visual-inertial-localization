@@ -33,6 +33,14 @@ struct FrontendThresholds {
   int maxBoWResults; ///< The maximum number of query results to return from the BoW.
 };
 
+/// \brief Parameters for the image feature detection algorithm
+struct FeatureDetectionParams {
+  double uniformityRadius;
+  int octaves;
+  double absoluteThreshold;
+  int maxNumKpt;
+};
+
 ///\brief This class processes an image and returns the detected marker poses.
 class Frontend
 {
@@ -55,7 +63,8 @@ class Frontend
                            double focalLengthV, double imageCenterU,
                            double imageCenterV, double k1, double k2, double p1,
                            double p2, double mapCamFocalLength,
-                           FrontendThresholds thresholds);
+                           FrontendThresholds thresholds,
+                           FeatureDetectionParams featureDetectionParams);
 
   /// \brief Load the map
   /// \parameter path The full path to the map file.
@@ -126,6 +135,7 @@ class Frontend
   typedef DBoW2::TemplatedDatabase<DBoW2::FBrisk::TDescriptor, DBoW2::FBrisk> FBriskDatabase;
 
   FrontendThresholds thresholds_; ///< Thresholds and parameters for localization and frame matching.
+  FeatureDetectionParams featureDetectionParams_; ///< Params for feature detection.
 
   FBriskVocabulary dBowVocabulary_; ///< The BRISK DBoW vocabulary -- load from disk.
   FBriskDatabase dBowDatabase_;   ///< The DBoW database to add frames to.
