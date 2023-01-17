@@ -26,11 +26,8 @@
 
 namespace arp {
 
-void drawKeypointsOnImage(const DetectionVec& detections, const std::vector<cv::KeyPoint> keypoints, const cv::Mat& image, cv::Mat& visualisationImage)
+void drawMatchedKeypointsOnImage(const DetectionVec& detections, cv::Mat& visualisationImage)
 {  
-  // Draw all found keypoints in red.
-  cv::drawKeypoints(image, keypoints, visualisationImage, cv::Scalar(0,0,255));
-
   // Draw all matched (and inlier) keypoints in green over the red ones.
   std::vector<cv::KeyPoint> matchedKeypoints;
   for (const auto& detection : detections){
@@ -289,9 +286,7 @@ bool Frontend::ransac(const std::vector<cv::Point3d>& worldPoints,
   }
   T_CW = kinematics::Transformation(T_CW_mat);
 
-  return ransacSuccess && 
-    (worldPoints.size() < thresholds_.minMatches ||
-      (double(inliers.size())/double(imagePoints.size()) > 0.7));
+  return ransacSuccess && (double(inliers.size())/double(imagePoints.size()) > 0.7);
 }
 
 bool Frontend::detectAndMatch(const cv::Mat& image, const Eigen::Vector3d & extractionDirection, 
@@ -308,6 +303,9 @@ bool Frontend::detectAndMatch(const cv::Mat& image, const Eigen::Vector3d & extr
   std::vector<cv::KeyPoint> keypoints;
   cv::Mat descriptors;
   detectAndDescribe(grayScale, extractionDirection, keypoints, descriptors);
+
+  // Draw all found keypoints in red onto the image:
+  cv::drawKeypoints(image, keypoints, visualisationImage, cv::Scalar(0,0,255));
 
   // IDs of keyframes to search
   std::vector<uint64_t> keyframeIds;
@@ -400,30 +398,43 @@ bool Frontend::detectAndMatch(const cv::Mat& image, const Eigen::Vector3d & extr
     lost_ = false;
   } else {
     lost_ = true;
+    return false;
   }
 
   // run RANSAC (to remove outliers and get pose T_CW estimate)
   std::vector<int> inliers;
   bool ransacSuccess = ransac(matchedLandmarkPoints, matchedImagePoints, T_CW, inliers);
-  if (!ransacSuccess) {
-    lost_ = true;
+
+  if(ransacSuccess) {
+    // set detections (only use inliers)
+    for (const auto& ptID : inliers)
+    { 
+      Detection detection;
+      detection.keypoint[0] = matchedImagePoints[ptID].x;
+      detection.keypoint[1] = matchedImagePoints[ptID].y;
+      detection.landmark[0] = matchedLandmarkPoints[ptID].x;
+      detection.landmark[1] = matchedLandmarkPoints[ptID].y;
+      detection.landmark[2] = matchedLandmarkPoints[ptID].z;
+      detection.landmarkId = matchedLandmarkIDs[ptID];
+      detections.push_back(detection);
+    }
+  } else {
+    // set detections (all, because ransac failed)
+    for (int i = 0; i < matchedImagePoints.size(); i++)
+    { 
+      Detection detection;
+      detection.keypoint[0] = matchedImagePoints[i].x;
+      detection.keypoint[1] = matchedImagePoints[i].y;
+      detection.landmark[0] = matchedLandmarkPoints[i].x;
+      detection.landmark[1] = matchedLandmarkPoints[i].y;
+      detection.landmark[2] = matchedLandmarkPoints[i].z;
+      detection.landmarkId = matchedLandmarkIDs[i];
+      detections.push_back(detection);
+    }
   }
 
-  // set detections (only use inliers)
-  for (const auto& ptID : inliers)
-  { 
-    Detection detection;
-    detection.keypoint[0] = matchedImagePoints[ptID].x;
-    detection.keypoint[1] = matchedImagePoints[ptID].y;
-    detection.landmark[0] = matchedLandmarkPoints[ptID].x;
-    detection.landmark[1] = matchedLandmarkPoints[ptID].y;
-    detection.landmark[2] = matchedLandmarkPoints[ptID].z;
-    detection.landmarkId = matchedLandmarkIDs[ptID];
-    detections.push_back(detection);
-  }
-
-  // visualise by painting keypoints into visualisationImage
-  drawKeypointsOnImage(detections, keypoints, image, visualisationImage);
+  // visualise by painting matched keypoints into visualisationImage
+  drawMatchedKeypointsOnImage(detections, visualisationImage);
   
   // We can use the RANSAC result without the outlier rejection,
   // but only if we don't need to reintialize.
