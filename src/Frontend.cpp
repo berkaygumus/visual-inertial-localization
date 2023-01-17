@@ -26,9 +26,12 @@
 
 namespace arp {
 
-void drawMatchedKeypointsOnImage(const DetectionVec& detections, const std::vector<cv::KeyPoint> keypoints, const cv::Mat& image, cv::Mat& visualisationImage)
+void drawKeypointsOnImage(const DetectionVec& detections, const std::vector<cv::KeyPoint> keypoints, const cv::Mat& image, cv::Mat& visualisationImage)
 {  
-  // Draw all matched (and inlier) keypoints in green over the red ones (which were drawn in detectAndMatch).
+  // Draw all found keypoints in red.
+  cv::drawKeypoints(image, keypoints, visualisationImage, cv::Scalar(0,0,255));
+
+  // Draw all matched (and inlier) keypoints in green over the red ones.
   std::vector<cv::KeyPoint> matchedKeypoints;
   for (const auto& detection : detections){
     // cv::drawMarker(visualisationImage, cv::Point2d{detection.keypoint[0],detection.keypoint[1]}, cv::Scalar(0,255,0));
@@ -262,6 +265,12 @@ bool Frontend::ransac(const std::vector<cv::Point3d>& worldPoints,
     return false;
   }
 
+  // this must stay in even if, theoretically, VI-EKF works with 2 matches
+  // because cv::solvePnPRansac asserts npoints >= 4
+  if(worldPoints.size()<5) {
+    return false; // not realiable enough
+  }
+
   inliers.clear();
   cv::Mat rvec, tvec;
   bool ransacSuccess = cv::solvePnPRansac(
@@ -299,9 +308,6 @@ bool Frontend::detectAndMatch(const cv::Mat& image, const Eigen::Vector3d & extr
   std::vector<cv::KeyPoint> keypoints;
   cv::Mat descriptors;
   detectAndDescribe(grayScale, extractionDirection, keypoints, descriptors);
-
-  // Draw all found keypoints in red.
-  cv::drawKeypoints(image, keypoints, visualisationImage, cv::Scalar(0,0,255));
 
   // IDs of keyframes to search
   std::vector<uint64_t> keyframeIds;
@@ -396,30 +402,28 @@ bool Frontend::detectAndMatch(const cv::Mat& image, const Eigen::Vector3d & extr
     lost_ = true;
   }
 
-  bool ransacSuccess = false;
-  // in theory reliable enough for VI-EKF
-  if (mostMatches > 2) {
-    // run RANSAC (to remove outliers and get pose T_CW estimate)
-    std::vector<int> inliers;
-    ransacSuccess = ransac(matchedLandmarkPoints, matchedImagePoints, T_CW, inliers);
-
-    // set detections (only use inliers)
-    for (const auto& ptID : inliers)
-    { 
-      Detection detection;
-      detection.keypoint[0] = matchedImagePoints[ptID].x;
-      detection.keypoint[1] = matchedImagePoints[ptID].y;
-      detection.landmark[0] = matchedLandmarkPoints[ptID].x;
-      detection.landmark[1] = matchedLandmarkPoints[ptID].y;
-      detection.landmark[2] = matchedLandmarkPoints[ptID].z;
-      detection.landmarkId = matchedLandmarkIDs[ptID];
-      detections.push_back(detection);
-    }
-
-    // visualise by painting keypoints into visualisationImage
-    drawMatchedKeypointsOnImage(detections, keypoints, image, visualisationImage);
+  // run RANSAC (to remove outliers and get pose T_CW estimate)
+  std::vector<int> inliers;
+  bool ransacSuccess = ransac(matchedLandmarkPoints, matchedImagePoints, T_CW, inliers);
+  if (!ransacSuccess) {
+    lost_ = true;
   }
-  
+
+  // set detections (only use inliers)
+  for (const auto& ptID : inliers)
+  { 
+    Detection detection;
+    detection.keypoint[0] = matchedImagePoints[ptID].x;
+    detection.keypoint[1] = matchedImagePoints[ptID].y;
+    detection.landmark[0] = matchedLandmarkPoints[ptID].x;
+    detection.landmark[1] = matchedLandmarkPoints[ptID].y;
+    detection.landmark[2] = matchedLandmarkPoints[ptID].z;
+    detection.landmarkId = matchedLandmarkIDs[ptID];
+    detections.push_back(detection);
+  }
+
+  // visualise by painting keypoints into visualisationImage
+  drawKeypointsOnImage(detections, keypoints, image, visualisationImage);
   
   // We can use the RANSAC result without the outlier rejection,
   // but only if we don't need to reintialize.
