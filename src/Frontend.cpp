@@ -419,7 +419,7 @@ bool Frontend::detectAndMatch(const cv::Mat& image, const Eigen::Vector3d & extr
       detections.push_back(detection);
     }
   } else {
-    // set detections (all, because ransac failed)
+    // set detections (all, because ransac failed but we have enough matched keypoints)
     for (int i = 0; i < matchedImagePoints.size(); i++)
     { 
       Detection detection;
