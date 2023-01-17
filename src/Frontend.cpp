@@ -26,12 +26,9 @@
 
 namespace arp {
 
-void drawKeypointsOnImage(const DetectionVec& detections, const std::vector<cv::KeyPoint> keypoints, const cv::Mat& image, cv::Mat& visualisationImage)
-{
-  // Draw all found keypoints in red.
-  cv::drawKeypoints(image, keypoints, visualisationImage, cv::Scalar(0,0,255));
-  
-  // Draw all matched (and inlier) keypoints in green over the red ones.
+void drawMatchedKeypointsOnImage(const DetectionVec& detections, const std::vector<cv::KeyPoint> keypoints, const cv::Mat& image, cv::Mat& visualisationImage)
+{  
+  // Draw all matched (and inlier) keypoints in green over the red ones (which were drawn in detectAndMatch).
   std::vector<cv::KeyPoint> matchedKeypoints;
   for (const auto& detection : detections){
     // cv::drawMarker(visualisationImage, cv::Point2d{detection.keypoint[0],detection.keypoint[1]}, cv::Scalar(0,255,0));
@@ -304,12 +301,14 @@ bool Frontend::detectAndMatch(const cv::Mat& image, const Eigen::Vector3d & extr
   cv::Mat descriptors;
   detectAndDescribe(grayScale, extractionDirection, keypoints, descriptors);
 
+  // Draw all found keypoints in red.
+  cv::drawKeypoints(image, keypoints, visualisationImage, cv::Scalar(0,0,255));
+
   // IDs of keyframes to search
   std::vector<uint64_t> keyframeIds;
 
   if (lost_) {
 
-    // std::cout << "lost = true" << std::endl;
     // find similar keyframes to only search potentially visible landmarks
     std::vector<DBoW2::FBrisk::TDescriptor> features;
     for (size_t i = 0; i < descriptors.rows; i++) {
@@ -329,7 +328,6 @@ bool Frontend::detectAndMatch(const cv::Mat& image, const Eigen::Vector3d & extr
     keyframeIds.push_back(activeKeyframe_);
     const std::set<uint64_t>& covisibilities = covisibilities_.at(activeKeyframe_);
     keyframeIds.insert(std::end(keyframeIds), std::begin(covisibilities), std::end(covisibilities));
-    // std::cout << "Looking at " << keyframeIds.size() << " covisible frames."  << std::endl;
     
   }
 
@@ -396,31 +394,29 @@ bool Frontend::detectAndMatch(const cv::Mat& image, const Eigen::Vector3d & extr
     std::cout << "Active key frame=" << activeKeyframe_ << ", matches=" << mostMatches << std::endl;
     lost_ = false;
   } else {
-    std::cout << "We are lost lmao." << std::endl;
     lost_ = true;
+    return false;
   }
 
   // run RANSAC (to remove outliers and get pose T_CW estimate)
   std::vector<int> inliers;
   bool ransacSuccess = ransac(matchedLandmarkPoints, matchedImagePoints, T_CW, inliers);
 
-  if (!lost_) {
-    // set detections (only use inliers)
-    for (const auto& ptID : inliers)
-    { 
-      Detection detection;
-      detection.keypoint[0] = matchedImagePoints[ptID].x;
-      detection.keypoint[1] = matchedImagePoints[ptID].y;
-      detection.landmark[0] = matchedLandmarkPoints[ptID].x;
-      detection.landmark[1] = matchedLandmarkPoints[ptID].y;
-      detection.landmark[2] = matchedLandmarkPoints[ptID].z;
-      detection.landmarkId = matchedLandmarkIDs[ptID];
-      detections.push_back(detection);
-    }
+  // set detections (only use inliers)
+  for (const auto& ptID : inliers)
+  { 
+    Detection detection;
+    detection.keypoint[0] = matchedImagePoints[ptID].x;
+    detection.keypoint[1] = matchedImagePoints[ptID].y;
+    detection.landmark[0] = matchedLandmarkPoints[ptID].x;
+    detection.landmark[1] = matchedLandmarkPoints[ptID].y;
+    detection.landmark[2] = matchedLandmarkPoints[ptID].z;
+    detection.landmarkId = matchedLandmarkIDs[ptID];
+    detections.push_back(detection);
   }
   
   // visualise by painting keypoints into visualisationImage
-  drawKeypointsOnImage(detections, keypoints, image, visualisationImage);
+  drawMatchedKeypointsOnImage(detections, keypoints, image, visualisationImage);
   
   // We can use the RANSAC result without the outlier rejection,
   // but only if we don't need to reintialize.
