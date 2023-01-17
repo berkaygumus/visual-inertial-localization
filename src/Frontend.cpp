@@ -261,9 +261,6 @@ bool Frontend::ransac(const std::vector<cv::Point3d>& worldPoints,
   if(worldPoints.size() != imagePoints.size()) {
     return false;
   }
-  if(worldPoints.size()<5) {
-    return false; // not realiable enough
-  }
 
   inliers.clear();
   cv::Mat rvec, tvec;
@@ -283,7 +280,9 @@ bool Frontend::ransac(const std::vector<cv::Point3d>& worldPoints,
   }
   T_CW = kinematics::Transformation(T_CW_mat);
 
-  return ransacSuccess && (double(inliers.size())/double(imagePoints.size()) > 0.7);
+  return ransacSuccess && 
+    (worldPoints.size() < thresholds_.minMatches ||
+      (double(inliers.size())/double(imagePoints.size()) > 0.7));
 }
 
 bool Frontend::detectAndMatch(const cv::Mat& image, const Eigen::Vector3d & extractionDirection, 
@@ -395,28 +394,32 @@ bool Frontend::detectAndMatch(const cv::Mat& image, const Eigen::Vector3d & extr
     lost_ = false;
   } else {
     lost_ = true;
-    return false;
   }
 
-  // run RANSAC (to remove outliers and get pose T_CW estimate)
-  std::vector<int> inliers;
-  bool ransacSuccess = ransac(matchedLandmarkPoints, matchedImagePoints, T_CW, inliers);
+  bool ransacSuccess = false;
+  // in theory reliable enough for VI-EKF
+  if (mostMatches > 2) {
+    // run RANSAC (to remove outliers and get pose T_CW estimate)
+    std::vector<int> inliers;
+    ransacSuccess = ransac(matchedLandmarkPoints, matchedImagePoints, T_CW, inliers);
 
-  // set detections (only use inliers)
-  for (const auto& ptID : inliers)
-  { 
-    Detection detection;
-    detection.keypoint[0] = matchedImagePoints[ptID].x;
-    detection.keypoint[1] = matchedImagePoints[ptID].y;
-    detection.landmark[0] = matchedLandmarkPoints[ptID].x;
-    detection.landmark[1] = matchedLandmarkPoints[ptID].y;
-    detection.landmark[2] = matchedLandmarkPoints[ptID].z;
-    detection.landmarkId = matchedLandmarkIDs[ptID];
-    detections.push_back(detection);
+    // set detections (only use inliers)
+    for (const auto& ptID : inliers)
+    { 
+      Detection detection;
+      detection.keypoint[0] = matchedImagePoints[ptID].x;
+      detection.keypoint[1] = matchedImagePoints[ptID].y;
+      detection.landmark[0] = matchedLandmarkPoints[ptID].x;
+      detection.landmark[1] = matchedLandmarkPoints[ptID].y;
+      detection.landmark[2] = matchedLandmarkPoints[ptID].z;
+      detection.landmarkId = matchedLandmarkIDs[ptID];
+      detections.push_back(detection);
+    }
+
+    // visualise by painting keypoints into visualisationImage
+    drawMatchedKeypointsOnImage(detections, keypoints, image, visualisationImage);
   }
   
-  // visualise by painting keypoints into visualisationImage
-  drawMatchedKeypointsOnImage(detections, keypoints, image, visualisationImage);
   
   // We can use the RANSAC result without the outlier rejection,
   // but only if we don't need to reintialize.
