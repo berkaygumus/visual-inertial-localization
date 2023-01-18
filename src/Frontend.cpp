@@ -119,6 +119,7 @@ bool  Frontend::loadMap(std::string path) {
         std::string landmarkIdString;
         std::getline(ss, landmarkIdString, ',');
         std::stringstream(landmarkIdString) >> landmarkId;
+        landmark.landmarkId = landmarkId;
         
         // read 3d position
         Landmark landmark;
