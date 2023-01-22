@@ -15,6 +15,7 @@ find_package(catkin REQUIRED COMPONENTS
   sensor_msgs
   std_msgs
   geometry_msgs
+  interactive_markers
 )
 
 ## System dependencies are found with CMake's conventions
@@ -203,6 +204,7 @@ add_library(${PROJECT_NAME}
    src/Imu.cpp
    src/ViEkf.cpp
    src/FBrisk.cpp
+   src/PidController.cpp
 )
 add_dependencies(${PROJECT_NAME} brisk agast)
 target_link_libraries(${PROJECT_NAME}

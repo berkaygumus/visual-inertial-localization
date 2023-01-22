@@ -144,6 +144,7 @@ bool  Frontend::loadMap(std::string path) {
       landmarks.clear();
     } else {
       if(poseId>0) {
+        Landmark landmark;
       
         // get keypoint idx
         size_t keypointIdx;
@@ -156,9 +157,9 @@ bool  Frontend::loadMap(std::string path) {
         std::string landmarkIdString;
         std::getline(ss, landmarkIdString, ',');
         std::stringstream(landmarkIdString) >> landmarkId;
+        landmark.landmarkId = landmarkId;
         
         // read 3d position
-        Landmark landmark;
         for(int i=0; i<3; ++i) {
           std::string coordString;
           std::getline(ss, coordString, ',');
