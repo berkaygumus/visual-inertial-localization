@@ -24,6 +24,7 @@
 #include <math.h>
 
 #include <arp/kinematics/Imu.hpp>
+#include <arp/PidController.hpp>
 
 namespace arp {
 
@@ -144,6 +145,12 @@ class Autopilot {
   double ref_yaw_ = 0.0; ///< World frame yaw reference [rad].
   std::mutex refMutex_; ///< We need to lock the reference access due to asynchronous arrival.
   std::atomic<bool> isAutomatic_; ///< True, if in automatic control mode.
+
+  // PID Controller members
+  arp::PidController x_controller_;
+  arp::PidController y_controller_;
+  arp::PidController z_controller_;
+  arp::PidController yaw_controller_;
 };
 
 } // namespace arp

@@ -23,7 +23,7 @@ Renderer::~Renderer()
     SDL_Quit();
 }
 
-void Renderer::render(cv::Mat& image, arp::Autopilot::DroneStatus droneStatus, float batteryLevel)
+void Renderer::render(cv::Mat& image, arp::Autopilot::DroneStatus droneStatus, float batteryLevel, bool isAutomatic)
 {
 
     // undistort before creating texture
@@ -36,6 +36,7 @@ void Renderer::render(cv::Mat& image, arp::Autopilot::DroneStatus droneStatus, f
     Overlay::displayInstructions(undistortedImage);
     Overlay::displayBattery(undistortedImage, batteryLevel);
     Overlay::displayDroneStatus(undistortedImage, droneStatus);
+    Overlay::displayControlMode(undistortedImage, isAutomatic);
     
     // https://stackoverflow.com/questions/22702630/converting-cvmat-to-sdl-texture
     // I'm using SDL_TEXTUREACCESS_STREAMING because it's for a video player, you should

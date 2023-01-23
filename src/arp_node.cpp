@@ -22,6 +22,7 @@
 #include <arp/cameras/RadialTangentialDistortion.hpp>
 #include <arp/VisualInertialTracker.hpp>
 #include <arp/StatePublisher.hpp>
+#include <arp/InteractiveMarkerServer.hpp>
 
 #include <Commands.hpp>
 #include <Renderer.hpp>
@@ -86,6 +87,10 @@ int main(int argc, char **argv)
 
   // set up autopilot
   arp::Autopilot autopilot(nh);
+
+  // setup interactive marker server for pose reference and activate it.
+  arp::InteractiveMarkerServer markerServer(autopilot);
+  markerServer.activate(0.0, 0.0, 0.0, 0.0);
 
   // set up camera model
   bool success = true;
@@ -178,7 +183,10 @@ int main(int argc, char **argv)
 
   // set up visualisation: publish poses to topic ardrone/vi_ekf_pose
   visualInertialTracker.setVisualisationCallback(std::bind(&arp::StatePublisher::publish, &pubState, std::placeholders::_1, std::placeholders::_2));
-
+  
+  // set up controller callback (estimator needs to call the autopilot, when it's done computing the state)
+  visualInertialTracker.setControllerCallback(std::bind(&arp::Autopilot::controllerCallback, &autopilot, std::placeholders::_1, std::placeholders::_2));
+      
   // setup inputs
   Subscriber subscriber(&visualInertialTracker);
   image_transport::Subscriber subImage = it.subscribe(
@@ -206,11 +214,11 @@ int main(int argc, char **argv)
     //   renderer.render(image, autopilot.droneStatus(), autopilot.getBatteryLevel());
     // }
     if(visualInertialTracker.getLastVisualisationImage(imageWithKeypoints)) {
-      renderer.render(imageWithKeypoints, autopilot.droneStatus(), autopilot.getBatteryLevel());
+      renderer.render(imageWithKeypoints, autopilot.droneStatus(), autopilot.getBatteryLevel(), autopilot.isAutomatic());
     }
 
     // Check if keys are pressed and execute associated commands
-    Commands::checkKeysForCommand(autopilot, renderer, visualInertialTracker);
+    Commands::checkKeysForCommand(autopilot, renderer, visualInertialTracker, markerServer);
   }
 
   // make sure to land the drone...

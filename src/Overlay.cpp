@@ -41,6 +41,12 @@ void displayInstructions(cv::Mat& image)
       
       // draw enable/disable fusion command
       putText(image, "[E]: fusion enable/disable ", cv::Point(image.cols - 260, image.rows - 85), Color::White);
+
+      // draw enter manual mode command
+      putText(image, "[SPACE]: manual mode ", cv::Point(image.cols - 260, image.rows - 110), Color::White);
+      
+      // draw enter automatic mode command
+      putText(image, "[LCTRL]: automatic mode ", cv::Point(image.cols - 260, image.rows - 135), Color::White);
 }
 
 void displayBattery(cv::Mat& image, float battery)
@@ -76,6 +82,15 @@ void displayDroneStatus(cv::Mat& image, arp::Autopilot::DroneStatus droneStatus)
     }
     std::string text = "Status: " + statusAsString;
     putText(image, text, cv::Point(5, 15), Color::White);
+}
+
+void displayControlMode(cv::Mat& image, bool isAutomatic)
+{
+    if (isAutomatic) {
+        putText(image, "Control mode: AUTOMATIC", cv::Point(5, 40), Color::White);
+    } else {
+        putText(image, "Control mode: MANUAL", cv::Point(5, 40), Color::White);
+    }
 }
 
 }
