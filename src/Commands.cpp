@@ -79,7 +79,7 @@ void checkKeysForCommand(arp::Autopilot& autopilot, gui::Renderer& renderer,
       fusionTogglePending = false;
     }
 
-    if (state[SDL_SCANCODE_LCTRL]) { // TODO: change to RCTRL (I don't have RCTRL on my Surface keyboard lol)
+    if (state[SDL_SCANCODE_RCTRL]) { // (I don't have RCTRL on my Surface keyboard lol)
       printCommand("Entering automatic control mode...     status=", droneStatus);
       double x, y, z, yaw;
       bool success = autopilot.getPoseReference(x, y, z, yaw);

@@ -46,7 +46,7 @@ void displayInstructions(cv::Mat& image)
       putText(image, "[SPACE]: manual mode ", cv::Point(image.cols - 260, image.rows - 110), Color::White);
       
       // draw enter automatic mode command
-      putText(image, "[LCTRL]: automatic mode ", cv::Point(image.cols - 260, image.rows - 135), Color::White);
+      putText(image, "[RCTRL]: automatic mode ", cv::Point(image.cols - 260, image.rows - 135), Color::White);
 }
 
 void displayBattery(cv::Mat& image, float battery)
