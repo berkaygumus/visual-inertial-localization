@@ -90,7 +90,7 @@ void checkKeysForCommand(arp::Autopilot& autopilot, gui::Renderer& renderer,
 
     if (state[SDL_SCANCODE_SPACE]) {
       printCommand("Entering manual control mode...        status=", droneStatus);
-      markerServer.deactivate(); // TODO: only call it once? (comment in first line of activate() function)
+      // markerServer.deactivate(); // TODO: only call it once? (comment in first line of activate() function "make sure not called more than once...")
       autopilot.setManual();
       printStatus(true); // the called functions don't return any boolean to see if it was successful.
     }

@@ -151,6 +151,8 @@ class Autopilot {
   arp::PidController y_controller_;
   arp::PidController z_controller_;
   arp::PidController yaw_controller_;
+  // Controller limits
+  double euler_angle_max_, control_vz_max_, control_yaw_;
 };
 
 } // namespace arp

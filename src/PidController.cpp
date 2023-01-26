@@ -34,10 +34,7 @@ double PidController::control(uint64_t timestampMicroseconds, double e,
     // the time delta might be huge and integrating the error signal with that 
     // huge delta would be catastrophic. So limit the maximum time delta allowed 
     // for integrating to something like 0.1s.
-    if (time_delta_in_sec > 0.1)
-    {
-      resetIntegrator(); // set the integratedError_ back to 0. TODO: Not 100% if this is correct
-    } else {
+    if (time_delta_in_sec < 0.1) {
       integratedError_ += e * time_delta_in_sec; // Integrate the error.
     }
   }

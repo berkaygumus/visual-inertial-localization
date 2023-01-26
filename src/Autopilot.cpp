@@ -28,21 +28,34 @@ Autopilot::Autopilot(ros::NodeHandle& nh)
   srvFlattrim_ = nh_->serviceClient<std_srvs::Empty>(
       nh_->resolveName("ardrone/flattrim"), 1);
 
-  // Initialize PID-Controller parameters (sensibly!)
-  arp::PidController::Parameters controllerParameters;
-  controllerParameters.k_p = 0.1; // 0.5
-  controllerParameters.k_i = 0.0;
-  controllerParameters.k_d = 0.1;
-  x_controller_.setParameters(controllerParameters);
-  y_controller_.setParameters(controllerParameters);
-  controllerParameters.k_p = 1.0; // 0.5
-  controllerParameters.k_i = 0.0;
-  controllerParameters.k_d = 0.0;
-  z_controller_.setParameters(controllerParameters);
-  controllerParameters.k_p = 1.5; // 2.6
-  controllerParameters.k_i = 0.0;
-  controllerParameters.k_d = 0.0;
-  yaw_controller_.setParameters(controllerParameters);
+  // Initialize PID-Controller parameters
+  // Get ros parameters 
+  bool success = true;
+  success &= nh_->getParam("/ardrone_driver/euler_angle_max", euler_angle_max_);
+  success &= nh_->getParam("/ardrone_driver/control_vz_max", control_vz_max_);
+  success &= nh_->getParam("/ardrone_driver/control_yaw", control_yaw_);
+  arp::PidController::Parameters controllerParameters_xy, controllerParameters_z, controllerParameters_yaw;
+  success &= nh_->getParam("/ardrone_driver/pid_xy_kp", controllerParameters_xy.k_p);
+  success &= nh_->getParam("/ardrone_driver/pid_xy_ki", controllerParameters_xy.k_i);
+  success &= nh_->getParam("/ardrone_driver/pid_xy_kd", controllerParameters_xy.k_d);
+  success &= nh_->getParam("/ardrone_driver/pid_z_kp", controllerParameters_z.k_p);
+  success &= nh_->getParam("/ardrone_driver/pid_z_ki", controllerParameters_z.k_i);
+  success &= nh_->getParam("/ardrone_driver/pid_z_kd", controllerParameters_z.k_d);
+  success &= nh_->getParam("/ardrone_driver/pid_yaw_kp", controllerParameters_yaw.k_p);
+  success &= nh_->getParam("/ardrone_driver/pid_yaw_ki", controllerParameters_yaw.k_i);
+  success &= nh_->getParam("/ardrone_driver/pid_yaw_kd", controllerParameters_yaw.k_d);
+  if (!success) {
+    ROS_ERROR("Error reading ROS parameters.");
+    return;
+  }
+  // Convert control_vz_max from mm/s to m/s
+  control_vz_max_ *= 1.0e-3;
+  
+  // Set the control parameters.
+  x_controller_.setParameters(controllerParameters_xy);
+  y_controller_.setParameters(controllerParameters_xy);
+  z_controller_.setParameters(controllerParameters_z);
+  yaw_controller_.setParameters(controllerParameters_yaw);
 }
 
 void Autopilot::navdataCallback(const ardrone_autonomy::NavdataConstPtr& msg)
@@ -165,6 +178,10 @@ void Autopilot::setManual()
 // Set to manual control mode.
 void Autopilot::setAutomatic()
 {
+  x_controller_.resetIntegrator();
+  y_controller_.resetIntegrator();
+  z_controller_.resetIntegrator();
+  yaw_controller_.resetIntegrator();
   isAutomatic_ = true;
 }
 
@@ -200,74 +217,56 @@ void Autopilot::controllerCallback(uint64_t timeMicroseconds,
     return;
   }
 
-  // TODO: only enable when in flight
+  // Only enable when in flight
   DroneStatus status = droneStatus();
-  if (status == DroneStatus::Flying || status == DroneStatus::Hovering || status == DroneStatus::Flying2) 
+  if (status != DroneStatus::Flying && status != DroneStatus::Hovering && status != DroneStatus::Flying2) 
   {
-    // Compute position error
-    Eigen::Vector3d t_ref_WS{ref_x_, ref_y_, ref_z_};
-    Eigen::Matrix3d R_SW = x.q_WS.toRotationMatrix().transpose();
-    Eigen::Vector3d position_error = R_SW * (t_ref_WS - x.t_WS);
-    // Compute yaw error
-    double yaw_estimated = arp::kinematics::yawAngle(x.q_WS);
-    double yaw_error = ref_yaw_ - yaw_estimated;
-    // Ensure that yaw error is within the limits of [-pi,pi]
-    yaw_error += M_PI;
-    double num_shifts = floor(yaw_error / (2*M_PI));
-    yaw_error += -num_shifts * 2*M_PI;
-    yaw_error -= M_PI;
-    // std::cout << "yaw_error: " << yaw_error << std::endl;
-
-    // Compute the approximated time derivatives of the error signals
-    Eigen::Vector3d position_error_dot = -R_SW * x.v_W;
-    double yaw_error_dot = 0.0;
-
-    // Get ros parameters (limits)
-    bool success = true;
-    double euler_angle_max, control_vz_max, control_yaw;
-    success &= nh_->getParam("/ardrone_driver/euler_angle_max", euler_angle_max);
-    success &= nh_->getParam("/ardrone_driver/control_vz_max", control_vz_max);
-    success &= nh_->getParam("/ardrone_driver/control_yaw", control_yaw);
-    if (!success) {
-      ROS_ERROR("Error reading ROS parameters (limits).");
-      return;
-    }
-    // Convert control_vz_max from mm/s to m/s
-    control_vz_max *= 1.0e-3;
-    
-    // Set the output limits of the contollers
-    x_controller_.setOutputLimits(-euler_angle_max, euler_angle_max);
-    y_controller_.setOutputLimits(-euler_angle_max, euler_angle_max);
-    z_controller_.setOutputLimits(-control_vz_max, control_vz_max);
-    yaw_controller_.setOutputLimits(-control_yaw, control_yaw);
-
-    double output_x = x_controller_.control(timeMicroseconds, position_error(0), position_error_dot(0));
-    double output_y = y_controller_.control(timeMicroseconds, position_error(1), position_error_dot(1));
-    double output_z = z_controller_.control(timeMicroseconds, position_error(2), position_error_dot(2));
-    double output_yaw = yaw_controller_.control(timeMicroseconds, yaw_error, yaw_error_dot);
-
-    // Scale the controller outputs for the move command
-    double eps = 1.0e-6;
-    if (euler_angle_max < eps || control_vz_max < eps || control_yaw < eps) // Check if limits are too small before dividing!
-    {
-      std::cout << "Output limits of controller close to zero (division by zero). Move command won't be sent" << std::endl;
-      return;
-    }
-    output_x /= euler_angle_max;
-    output_y /= euler_angle_max;
-    output_z /= control_vz_max;
-    output_yaw /= control_yaw;
-
-    // Command the drone to move
-    move(output_x, output_y, output_z, output_yaw);
+    return;
   }
 
-  // TODO: get ros parameter
+  // Compute position error
+  Eigen::Vector3d t_ref_WS{ref_x_, ref_y_, ref_z_};
+  Eigen::Matrix3d R_SW = x.q_WS.toRotationMatrix().transpose();
+  Eigen::Vector3d position_error = R_SW * (t_ref_WS - x.t_WS);
   
-  // TODO: compute control output
+  // Compute yaw error
+  double yaw_estimated = arp::kinematics::yawAngle(x.q_WS);
+  double yaw_error = ref_yaw_ - yaw_estimated;
+  // Ensure that yaw error is within the limits of [-pi,pi]
+  yaw_error += M_PI;
+  double num_shifts = floor(yaw_error / (2*M_PI));
+  yaw_error += -num_shifts * 2*M_PI;
+  yaw_error -= M_PI;
+  
+  // Compute the approximated time derivatives of the error signals
+  Eigen::Vector3d position_error_dot = -R_SW * x.v_W;
+  double yaw_error_dot = 0.0;
 
-  // TODO: send to move
+  // Set the output limits of the contollers
+  x_controller_.setOutputLimits(-euler_angle_max_, euler_angle_max_);
+  y_controller_.setOutputLimits(-euler_angle_max_, euler_angle_max_);
+  z_controller_.setOutputLimits(-control_vz_max_, control_vz_max_);
+  yaw_controller_.setOutputLimits(-control_yaw_, control_yaw_);
 
+  double output_x = x_controller_.control(timeMicroseconds, position_error(0), position_error_dot(0));
+  double output_y = y_controller_.control(timeMicroseconds, position_error(1), position_error_dot(1));
+  double output_z = z_controller_.control(timeMicroseconds, position_error(2), position_error_dot(2));
+  double output_yaw = yaw_controller_.control(timeMicroseconds, yaw_error, yaw_error_dot);
+
+  // Scale the controller outputs for the move command
+  double eps = 1.0e-6;
+  if (euler_angle_max_ < eps || control_vz_max_ < eps || control_yaw_ < eps) // Check if limits are too small before dividing!
+  {
+    std::cout << "Output limits of controller close to zero (division by zero). Move command won't be sent" << std::endl;
+    return;
+  }
+  output_x /= euler_angle_max_;
+  output_y /= euler_angle_max_;
+  output_z /= control_vz_max_;
+  output_yaw /= control_yaw_;
+
+  // Command the drone to move
+  move(output_x, output_y, output_z, output_yaw);
 }
 
 }  // namespace arp

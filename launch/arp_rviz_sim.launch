@@ -10,9 +10,20 @@
   
   <!-- Emulate controller parameters-->
   <group ns="ardrone_driver">
+    <!-- limits -->
     <param name="euler_angle_max" value="0.21" />
     <param name="control_vz_max" value="700" />
     <param name="control_yaw" value="1.75" />
+    <!-- controller parameters -->
+    <param name="pid_xy_kp" value="0.15" /> 
+    <param name="pid_xy_ki" value="0.01" />
+    <param name="pid_xy_kd" value="0.05" /> 
+    <param name="pid_z_kp" value="1.5" />
+    <param name="pid_z_ki" value="0.02" />
+    <param name="pid_z_kd" value="0.2" />
+    <param name="pid_yaw_kp" value="1.25" />
+    <param name="pid_yaw_ki" value="0.01" />
+    <param name="pid_yaw_kd" value="0.2" />
   </group>
   
   <!-- Launch visualisation. -->
