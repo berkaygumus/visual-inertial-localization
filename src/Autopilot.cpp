@@ -145,7 +145,10 @@ bool Autopilot::estopReset()
 bool Autopilot::manualMove(double forward, double left, double up,
                            double rotateLeft)
 {
-  // Check for manual mode here?
+  // Check for manual mode
+  if (isAutomatic()) {
+    return false;
+  }
   return move(forward, left, up, rotateLeft);
 }
 
