@@ -48,9 +48,15 @@ Autopilot::Autopilot(ros::NodeHandle& nh)
     ROS_ERROR("Error reading ROS parameters.");
     return;
   }
-  // Convert control_vz_max from mm/s to m/s
+  // Convert control_vz_max from mm/s to m/s.
   control_vz_max_ *= 1.0e-3;
   
+  // Set the output limits of the contollers.
+  x_controller_.setOutputLimits(-euler_angle_max_, euler_angle_max_);
+  y_controller_.setOutputLimits(-euler_angle_max_, euler_angle_max_);
+  z_controller_.setOutputLimits(-control_vz_max_, control_vz_max_);
+  yaw_controller_.setOutputLimits(-control_yaw_, control_yaw_);
+
   // Set the control parameters.
   x_controller_.setParameters(controllerParameters_xy);
   y_controller_.setParameters(controllerParameters_xy);
@@ -241,12 +247,6 @@ void Autopilot::controllerCallback(uint64_t timeMicroseconds,
   // Compute the approximated time derivatives of the error signals
   Eigen::Vector3d position_error_dot = -R_SW * x.v_W;
   double yaw_error_dot = 0.0;
-
-  // Set the output limits of the contollers
-  x_controller_.setOutputLimits(-euler_angle_max_, euler_angle_max_);
-  y_controller_.setOutputLimits(-euler_angle_max_, euler_angle_max_);
-  z_controller_.setOutputLimits(-control_vz_max_, control_vz_max_);
-  yaw_controller_.setOutputLimits(-control_yaw_, control_yaw_);
 
   double output_x = x_controller_.control(timeMicroseconds, position_error(0), position_error_dot(0));
   double output_y = y_controller_.control(timeMicroseconds, position_error(1), position_error_dot(1));
