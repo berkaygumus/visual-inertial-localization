@@ -14,4 +14,7 @@ void displayBattery(cv::Mat& image, float battery);
 ///\brief Writes the drone status (in prose) to the supplied image.
 void displayDroneStatus(cv::Mat& image, arp::Autopilot::DroneStatus droneStatus);
 
+/// @brief Writes the current control mode to the supplied image.
+void displayControlMode(cv::Mat& image, bool isAutomatic);
+
 }

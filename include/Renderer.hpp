@@ -30,7 +30,7 @@ class Renderer {
     /// @param image Image to be displayed by the renderer.
     /// @param droneStatus Status of the drone for the overlay.
     /// @param batteryLevel Battery level of the drone for the overlay.
-    void render(cv::Mat& image, arp::Autopilot::DroneStatus droneStatus, float batteryLevel);
+    void render(cv::Mat& image, arp::Autopilot::DroneStatus droneStatus, float batteryLevel, bool isAutomatic);
     /// @brief Toggles whether the renderer undistorts the image received from the camera before showing it.
     void toggleUndistortionBeforeRender();
     /// @brief Returns true if SDL_Window is closed (SDL_QUIT event). 

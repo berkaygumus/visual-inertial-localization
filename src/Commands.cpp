@@ -20,7 +20,9 @@ void printStatus(const bool success)
     }
 }
 
-void checkKeysForCommand(arp::Autopilot& autopilot, gui::Renderer& renderer,  arp::VisualInertialTracker& visualInertialTracker)
+void checkKeysForCommand(arp::Autopilot& autopilot, gui::Renderer& renderer,
+                         arp::VisualInertialTracker& visualInertialTracker,
+                         arp::InteractiveMarkerServer& markerServer)
 {
     //Multiple Key Capture Begins
     const Uint8 *state = SDL_GetKeyboardState(NULL);
@@ -76,8 +78,26 @@ void checkKeysForCommand(arp::Autopilot& autopilot, gui::Renderer& renderer,  ar
       }
       fusionTogglePending = false;
     }
+
+    if (state[SDL_SCANCODE_RCTRL]) { // (I don't have RCTRL on my Surface keyboard lol)
+      printCommand("Entering automatic control mode...     status=", droneStatus);
+      double x, y, z, yaw;
+      bool success = autopilot.getPoseReference(x, y, z, yaw);
+      markerServer.activate(x, y, z, yaw);
+      autopilot.setAutomatic();
+      printStatus(success);
+    }
+
+    if (state[SDL_SCANCODE_SPACE]) {
+      printCommand("Entering manual control mode...        status=", droneStatus);
+      // markerServer.deactivate(); // TODO: only call it once? (comment in first line of activate() function "make sure not called more than once...")
+      autopilot.setManual();
+      printStatus(true); // the called functions don't return any boolean to see if it was successful.
+    }
     
-    if (droneStatus == autopilot.Flying || droneStatus == autopilot.Hovering || droneStatus == autopilot.Flying2) {
+    if (!autopilot.isAutomatic() && (droneStatus == autopilot.Flying || 
+                                     droneStatus == autopilot.Hovering || 
+                                     droneStatus == autopilot.Flying2)) {
         // Compute manual move values.
         double forward = state[SDL_SCANCODE_UP]   - state[SDL_SCANCODE_DOWN];
         double left    = state[SDL_SCANCODE_LEFT] - state[SDL_SCANCODE_RIGHT];
