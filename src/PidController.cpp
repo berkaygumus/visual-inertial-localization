@@ -23,20 +23,19 @@ double PidController::control(uint64_t timestampMicroseconds, double e,
   // Compute the output of the controller.
   double output = parameters_.k_p * e + parameters_.k_i * integratedError_ + parameters_.k_d * e_dot;
 
+  // Compute time delta and convert from micro-seconds to seconds.
+  double time_delta_in_sec = (timestampMicroseconds - lastTimestampMicroseconds_)*1.0e-6;
+
   if (output < minOutput_) {
     output = minOutput_;   // clamp & DO NOT INTEGRATE ERROR (anti-reset windup)
   } else if (output > maxOutput_) {
     output = maxOutput_;   // clamp & DO NOT INTEGRATE ERROR (anti-reset windup)
-  } else {
-    // Convert the time from micro-seconds to seconds.
-    double time_delta_in_sec = (timestampMicroseconds - lastTimestampMicroseconds_)*1.0e-6;
+  } else if (time_delta_in_sec < 0.1) {
     // When the automatic controller is off for a while and called again after, 
     // the time delta might be huge and integrating the error signal with that 
     // huge delta would be catastrophic. So limit the maximum time delta allowed 
     // for integrating to something like 0.1s.
-    if (time_delta_in_sec < 0.1) {
-      integratedError_ += e * time_delta_in_sec; // Integrate the error.
-    }
+    integratedError_ += e * time_delta_in_sec; // Integrate the error.
   }
 
   // Store timestamp for next control cycle.
