@@ -50,6 +50,14 @@ Autopilot::Autopilot(ros::NodeHandle& nh)
   }
   // Convert control_vz_max from mm/s to m/s.
   control_vz_max_ *= 1.0e-3;
+
+  double eps = 1.0e-6;
+  if (euler_angle_max_ < eps || control_vz_max_ < eps || control_yaw_ < eps) // Check if limits are too small before dividing!
+  {
+    limitsTooSmall_ = true;
+    ROS_ERROR("Output limits of controller close to zero (division by zero). Move command won't be sent");
+    return;
+  }
   
   // Set the output limits of the contollers.
   x_controller_.setOutputLimits(-euler_angle_max_, euler_angle_max_);
@@ -256,20 +264,16 @@ void Autopilot::controllerCallback(uint64_t timeMicroseconds,
   double output_z = z_controller_.control(timeMicroseconds, position_error(2), position_error_dot(2));
   double output_yaw = yaw_controller_.control(timeMicroseconds, yaw_error, yaw_error_dot);
 
-  // Scale the controller outputs for the move command
-  double eps = 1.0e-6;
-  if (euler_angle_max_ < eps || control_vz_max_ < eps || control_yaw_ < eps) // Check if limits are too small before dividing!
-  {
-    std::cout << "Output limits of controller close to zero (division by zero). Move command won't be sent" << std::endl;
-    return;
-  }
-  output_x /= euler_angle_max_;
-  output_y /= euler_angle_max_;
-  output_z /= control_vz_max_;
-  output_yaw /= control_yaw_;
+  if (!limitsTooSmall_) {
+    // Scale the controller outputs for the move command
+    output_x /= euler_angle_max_;
+    output_y /= euler_angle_max_;
+    output_z /= control_vz_max_;
+    output_yaw /= control_yaw_;
 
-  // Command the drone to move
-  move(output_x, output_y, output_z, output_yaw);
+    // Command the drone to move
+    move(output_x, output_y, output_z, output_yaw);
+  }
 }
 
 }  // namespace arp
