@@ -27,6 +27,7 @@
 #include <Commands.hpp>
 #include <Renderer.hpp>
 #include <OccupancyMap.h>
+#include <Task.h>
 #include <arp/Frontend.hpp>
 
 class Subscriber
@@ -154,7 +155,7 @@ int main(int argc, char **argv)
   // load occupancy map
   if (!nh.getParam("arp_node/occupancymap", mapFile)) ROS_FATAL("Could not find occupancy map path parameter.");
   mapPath = path+"/maps/"+mapFile;
-  OccupancyMap occupancyMap{mapPath};
+  auto occupancyMap = std::make_shared<OccupancyMap>(mapPath);
   
   // load DBoW2 vocabulary
   std::string vocPath = path+"/maps/small_voc.yml.gz";
@@ -200,6 +201,13 @@ int main(int argc, char **argv)
   // setup rendering
   gui::Renderer renderer{phc};
 
+  // load goal location
+  std::vector<double> pointB;
+  if (!nh.getParam("arp_node/pointB", pointB)) ROS_FATAL("Couldn't load goal point.");
+  // autopilot.setGoal(Eigen::Vector3d{pointB.data()});
+
+  Task task{autopilot, viEkf, Eigen::Vector3d{pointB.data()}, *occupancyMap};
+
   // enter main event loop
   std::cout << "===== Hello AR Drone ====" << std::endl;
   // cv::Mat image;
@@ -221,7 +229,7 @@ int main(int argc, char **argv)
     }
 
     // Check if keys are pressed and execute associated commands
-    Commands::checkKeysForCommand(autopilot, renderer, visualInertialTracker);
+    Commands::checkKeysForCommand(autopilot, renderer, visualInertialTracker, task);
   }
 
   // make sure to land the drone...

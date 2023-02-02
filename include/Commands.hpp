@@ -2,6 +2,7 @@
 
 #include <arp/Autopilot.hpp>
 #include <Renderer.hpp>
+#include <Task.h>
 #include <arp/VisualInertialTracker.hpp>
 
 namespace Commands {
@@ -12,6 +13,7 @@ namespace Commands {
 /// @param visualInertialTracker
 void checkKeysForCommand(arp::Autopilot& autopilot, 
                          gui::Renderer& renderer,
-                         arp::VisualInertialTracker& visualInertialTracker);
+                         arp::VisualInertialTracker& visualInertialTracker,
+                         Task &task);
 
 }

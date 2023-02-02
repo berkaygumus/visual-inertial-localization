@@ -12,6 +12,8 @@
 #include <Eigen/Core>
 #include <atomic>
 #include <deque>
+#include <functional>
+#include <memory>
 
 #include <ros/ros.h>
 
@@ -26,6 +28,9 @@
 
 #include <arp/kinematics/Imu.hpp>
 #include <arp/PidController.hpp>
+#include <arp/ViEkf.hpp>
+
+#include <OccupancyMap.h>
 
 namespace arp {
 
@@ -33,6 +38,9 @@ namespace arp {
 class Autopilot {
  public:
   EIGEN_MAKE_ALIGNED_OPERATOR_NEW
+
+  using DestinationReachedCallback = std::function<void()>;
+
   Autopilot(ros::NodeHandle& nh);
 
   /// \brief These are reverse engineered AR Drone states.
@@ -65,6 +73,12 @@ class Autopilot {
 
   /// \brief Are we currently in automatic mode?;
   bool isAutomatic() { return isAutomatic_; }
+
+  /// \brief Whether the drone status as reported by ROS is currently Flying et al.
+  bool isFlying() {
+    auto status = droneStatus();
+    return status == Flying || status == Flying2 || status == Hovering;
+  }
 
   /// \brief Request flattrim calibration.
   /// \return True on success.
@@ -142,6 +156,10 @@ class Autopilot {
     return waypoints_.size();
   }
 
+  void onDestinationReached(DestinationReachedCallback callback) { destinationReached_ = callback; }
+  
+  void clearDestinationReachedCallback() { destinationReached_ = {};  }
+
  protected:
   /// \brief Move the drone.
   /// @param[in] forward Forward tilt [-1,...,1] scaling the maximum tilt ROS parameter.
@@ -183,6 +201,8 @@ class Autopilot {
   
   std::deque<Waypoint> waypoints_;  ///< A list of waypoints that will be approached, if not empty.
   std::mutex waypointMutex_;  ///< We need to lock the waypoint access due to asynchronous arrival.
+
+  DestinationReachedCallback destinationReached_;
 };
 
 } // namespace arp

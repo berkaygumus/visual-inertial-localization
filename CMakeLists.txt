@@ -207,6 +207,7 @@ add_library(${PROJECT_NAME}
    src/PidController.cpp
    src/OccupancyMap.cpp
    src/Planner.cpp
+   src/Task.cpp
 )
 add_dependencies(${PROJECT_NAME} brisk agast)
 target_link_libraries(${PROJECT_NAME}

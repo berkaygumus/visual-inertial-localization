@@ -2,12 +2,12 @@
 
 namespace Planner {
 
-std::vector<arp::Autopilot::Waypoint> planFlight(const Eigen::Vector3d& start, 
-                                                 const Eigen::Vector3d& goal, 
-                                                 const OccupancyMap& occupancyMap)
+std::deque<arp::Autopilot::Waypoint> planFlight(const Eigen::Vector3d& start, 
+                                                const Eigen::Vector3d& goal, 
+                                                const OccupancyMap& occupancyMap)
 {
     // TODO
-    return {};
+    return { arp::Autopilot::Waypoint{goal(0), goal(1), goal(2), 0, 0.2} };
 }
 
 }

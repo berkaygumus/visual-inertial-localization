@@ -7,6 +7,7 @@
 
 #include <arp/Autopilot.hpp>
 #include <arp/kinematics/operators.hpp>
+#include <Planner.h>
 
 namespace arp {
 
@@ -164,8 +165,7 @@ bool Autopilot::manualMove(double forward, double left, double up,
 bool Autopilot::move(double forward, double left, double up, double rotateLeft)
 {
   // Check for valid drone status.
-  DroneStatus status = droneStatus();
-  if (status != DroneStatus::Flying && status != DroneStatus::Hovering && status != DroneStatus::Flying2) {
+  if (!isFlying()) {
     return false;
   }
 
@@ -235,8 +235,7 @@ void Autopilot::controllerCallback(uint64_t timeMicroseconds,
   }
 
   // Only enable when in flight
-  DroneStatus status = droneStatus();
-  if (status != DroneStatus::Flying && status != DroneStatus::Hovering && status != DroneStatus::Flying2) {
+  if (!isFlying()) {
     return;
   }
 
@@ -254,6 +253,9 @@ void Autopilot::controllerCallback(uint64_t timeMicroseconds,
       // remove current waypoint, if position error below tolerance.
       if ((x.t_WS - positionReference).norm() < currentWp.posTolerance) {
         waypoints_.pop_front();
+        if (waypoints_.empty() && destinationReached_) {
+          destinationReached_();
+        }
       }
     } else {
       // This is the original line of code:

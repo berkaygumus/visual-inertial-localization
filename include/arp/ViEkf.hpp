@@ -70,6 +70,10 @@ class ViEkf
     return T_SC_;
   }
 
+  const Eigen::Vector3d& getPositionEstimate() const {
+    return x_.t_WS;
+  }
+
   /// \brief Takes the IMU measurements but makes sure that the state is not immediately predicted
   ///        in order to synchronise with the updates
   /// \param[in] timestampMicroseconds The IMU measurement timestamp [usec].
