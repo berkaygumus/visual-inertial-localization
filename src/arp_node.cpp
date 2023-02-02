@@ -1,6 +1,7 @@
 #include <memory>
 #include <unistd.h>
 #include <stdlib.h>
+#include <fstream>
 
 #include <SDL2/SDL.h>
 
@@ -26,6 +27,7 @@
 
 #include <Commands.hpp>
 #include <Renderer.hpp>
+#include <OccupancyMap.h>
 #include <arp/Frontend.hpp>
 
 class Subscriber
@@ -78,6 +80,7 @@ class Subscriber
   std::mutex imageMutex_;
   arp::VisualInertialTracker* visualInertialTrackerPtr_;
 };
+
 
 int main(int argc, char **argv)
 {
@@ -152,6 +155,11 @@ int main(int argc, char **argv)
   if(!nh.getParam("arp_node/map", mapFile)) ROS_FATAL("error loading parameter");
   std::string mapPath = path+"/maps/"+mapFile;
   if(!frontend.loadMap(mapPath)) ROS_FATAL_STREAM("could not load map from " << mapPath << " !");
+
+  // load occupancy map
+  if (!nh.getParam("arp_node/occupancymap", mapFile)) ROS_FATAL("Could not find occupancy map path parameter.");
+  mapPath = path+"/maps/"+mapFile;
+  OccupancyMap occupancyMap{mapPath};
   
   // load DBoW2 vocabulary
   std::string vocPath = path+"/maps/small_voc.yml.gz";
