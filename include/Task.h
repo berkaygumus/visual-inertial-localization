@@ -21,13 +21,16 @@ private:
 
     void startJourney();
 
-    void destinationReachedCallback();
+    void goalReachedCallback();
+
+    void startReachedCallback();
 
     arp::Autopilot& autopilot_;
     arp::ViEkf& viEkf_;
     Eigen::Vector3d start_;
     Eigen::Vector3d goal_;
     const OccupancyMap& occupancyMap_;
-    std::deque<arp::Autopilot::Waypoint> waypoints_;
     Journey currentJourney_{Journey::ToGoal};
+    bool initialized_{false};
+    bool running_{false};
 };

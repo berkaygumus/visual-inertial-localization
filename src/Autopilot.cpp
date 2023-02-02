@@ -241,6 +241,7 @@ void Autopilot::controllerCallback(uint64_t timeMicroseconds,
 
   Eigen::Vector3d positionReference;
   double yaw_ref;
+  bool lastWaypointPopped = false;
 
   // Get waypoint list, if available
   { // <- manual scope for mutex lock
@@ -253,14 +254,22 @@ void Autopilot::controllerCallback(uint64_t timeMicroseconds,
       // remove current waypoint, if position error below tolerance.
       if ((x.t_WS - positionReference).norm() < currentWp.posTolerance) {
         waypoints_.pop_front();
-        if (waypoints_.empty() && destinationReached_) {
-          destinationReached_();
+        if (waypoints_.empty()) {
+          lastWaypointPopped = true;
         }
       }
     } else {
       // This is the original line of code:
       getPoseReference(positionReference[0], positionReference[1],positionReference[2], yaw_ref);
     }
+  }
+
+  // has to be handled outside the lock scope because otherwise there
+  // will be a deadlock:
+  // > controllerCallback locks waypoints
+  // > calls destinationReachedCallback which wants to set waypoints (!!!)
+  if (lastWaypointPopped && destinationReached_) {
+    destinationReached_();
   }
 
   // Compute position error
