@@ -23,7 +23,6 @@
 #include <arp/cameras/RadialTangentialDistortion.hpp>
 #include <arp/VisualInertialTracker.hpp>
 #include <arp/StatePublisher.hpp>
-#include <arp/InteractiveMarkerServer.hpp>
 
 #include <Commands.hpp>
 #include <Renderer.hpp>
@@ -90,10 +89,6 @@ int main(int argc, char **argv)
 
   // set up autopilot
   arp::Autopilot autopilot(nh);
-
-  // setup interactive marker server for pose reference and activate it.
-  arp::InteractiveMarkerServer markerServer(autopilot);
-  markerServer.activate(0.0, 0.0, 0.0, 0.0);
 
   // set up camera model
   bool success = true;
@@ -226,7 +221,7 @@ int main(int argc, char **argv)
     }
 
     // Check if keys are pressed and execute associated commands
-    Commands::checkKeysForCommand(autopilot, renderer, visualInertialTracker, markerServer);
+    Commands::checkKeysForCommand(autopilot, renderer, visualInertialTracker);
   }
 
   // make sure to land the drone...

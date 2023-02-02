@@ -3,7 +3,6 @@
 #include <arp/Autopilot.hpp>
 #include <Renderer.hpp>
 #include <arp/VisualInertialTracker.hpp>
-#include <arp/InteractiveMarkerServer.hpp>
 
 namespace Commands {
 
@@ -11,9 +10,8 @@ namespace Commands {
 /// @param autopilot 
 /// @param renderer
 /// @param visualInertialTracker
-/// @param markerServer
-void checkKeysForCommand(arp::Autopilot& autopilot, gui::Renderer& renderer,
-                         arp::VisualInertialTracker& visualInertialTracker, 
-                         arp::InteractiveMarkerServer& markerServer);
+void checkKeysForCommand(arp::Autopilot& autopilot, 
+                         gui::Renderer& renderer,
+                         arp::VisualInertialTracker& visualInertialTracker);
 
 }

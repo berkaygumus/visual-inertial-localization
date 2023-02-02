@@ -20,9 +20,9 @@ void printStatus(const bool success)
     }
 }
 
-void checkKeysForCommand(arp::Autopilot& autopilot, gui::Renderer& renderer,
-                         arp::VisualInertialTracker& visualInertialTracker,
-                         arp::InteractiveMarkerServer& markerServer)
+void checkKeysForCommand(arp::Autopilot& autopilot, 
+                         gui::Renderer& renderer,
+                         arp::VisualInertialTracker& visualInertialTracker)
 {
     //Multiple Key Capture Begins
     const Uint8 *state = SDL_GetKeyboardState(NULL);
@@ -81,11 +81,7 @@ void checkKeysForCommand(arp::Autopilot& autopilot, gui::Renderer& renderer,
 
     if (state[SDL_SCANCODE_RCTRL]) { // (I don't have RCTRL on my Surface keyboard lol)
       printCommand("Entering automatic control mode...     status=", droneStatus);
-      double x, y, z, yaw;
-      bool success = autopilot.getPoseReference(x, y, z, yaw);
-      markerServer.activate(x, y, z, yaw);
       autopilot.setAutomatic();
-      printStatus(success);
     }
 
     if (state[SDL_SCANCODE_SPACE]) {
