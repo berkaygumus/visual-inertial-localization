@@ -236,19 +236,38 @@ void Autopilot::controllerCallback(uint64_t timeMicroseconds,
 
   // Only enable when in flight
   DroneStatus status = droneStatus();
-  if (status != DroneStatus::Flying && status != DroneStatus::Hovering && status != DroneStatus::Flying2) 
-  {
+  if (status != DroneStatus::Flying && status != DroneStatus::Hovering && status != DroneStatus::Flying2) {
     return;
   }
 
+  Eigen::Vector3d positionReference;
+  double yaw_ref;
+
+  // Get waypoint list, if available
+  { // <- manual scope for mutex lock
+    std::lock_guard<std::mutex> l(waypointMutex_);
+    if(!waypoints_.empty()) {
+      // setPoseReference() from current waypoint
+      const Waypoint& currentWp = waypoints_.front();
+      setPoseReference(currentWp.x, currentWp.y, currentWp.z, currentWp.yaw); // TODO is this really necessary for every loop iteration? maybe implement a check
+      getPoseReference(positionReference[0], positionReference[1], positionReference[2], yaw_ref);
+      // remove current waypoint, if position error below tolerance.
+      if ((x.t_WS - positionReference).norm() < currentWp.posTolerance) {
+        waypoints_.pop_front();
+      }
+    } else {
+      // This is the original line of code:
+      getPoseReference(positionReference[0], positionReference[1],positionReference[2], yaw_ref);
+    }
+  }
+
   // Compute position error
-  Eigen::Vector3d t_ref_WS{ref_x_, ref_y_, ref_z_};
   Eigen::Matrix3d R_SW = x.q_WS.toRotationMatrix().transpose();
-  Eigen::Vector3d position_error = R_SW * (t_ref_WS - x.t_WS);
+  Eigen::Vector3d position_error = R_SW * (positionReference - x.t_WS);
   
   // Compute yaw error
   double yaw_estimated = arp::kinematics::yawAngle(x.q_WS);
-  double yaw_error = ref_yaw_ - yaw_estimated;
+  double yaw_error = yaw_ref - yaw_estimated;
   // Ensure that yaw error is within the limits of [-pi,pi]
   yaw_error += M_PI;
   double num_shifts = floor(yaw_error / (2*M_PI));
