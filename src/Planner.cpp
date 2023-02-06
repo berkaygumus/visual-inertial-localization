@@ -102,11 +102,11 @@ std::deque<arp::Autopilot::Waypoint> planFlight(const Eigen::Vector3d &start,
         std::pop_heap(open_vertex_vector_.begin(), open_vertex_vector_.end(), greater1());
         open_vertex_vector_.pop_back();
 
-        std::cout << "pop vertex: " << u.ijk[0] << " " << u.ijk[1] << " " << u.ijk[2] << std::endl;
+        //std::cout << "pop vertex: " << u.ijk[0] << " " << u.ijk[1] << " " << u.ijk[2] << std::endl;
 
         if (u.ijk == goal_ijk)
         {
-            std::cout << "reached" << std::endl;
+            std::cout << "path found" << std::endl;
             reached = true;
             break;
         }
@@ -125,7 +125,7 @@ std::deque<arp::Autopilot::Waypoint> planFlight(const Eigen::Vector3d &start,
                         v_ijk[0] = u.ijk[0] + dx;
                         v_ijk[1] = u.ijk[1] + dy;
                         v_ijk[2] = u.ijk[2] + dz;
-                        if (v_ijk[0] >= 0 && v_ijk[0] < sizes_[0] && v_ijk[1] >= 0 && v_ijk[1] < sizes_[1] && v_ijk[2] >= 0 && v_ijk[2] < sizes_[2] && occupancyMap.at(v_ijk[0], v_ijk[1], v_ijk[2]) < -3 // if it is unblocked TODO: there is a problem in cost map
+                        if (v_ijk[0] >= 0 && v_ijk[0] < sizes_[0] && v_ijk[1] >= 0 && v_ijk[1] < sizes_[1] && v_ijk[2] >= 0 && v_ijk[2] < sizes_[2] && occupancyMap.at(v_ijk[0], v_ijk[1], v_ijk[2]) < 3 // if it is unblocked TODO: there is a problem in cost map
                             //&& closedList_.at<double>(v_ijk[0], v_ijk[1], v_ijk[2]) == -1
                         )
                         {
@@ -134,7 +134,7 @@ std::deque<arp::Autopilot::Waypoint> planFlight(const Eigen::Vector3d &start,
                             {
                                 std::cout << "there is an obstacle TODO: skip this point" << std::endl;
                             }
-                            std::cout << "cost: " << occupancyMap.at(v_ijk[0], v_ijk[1], v_ijk[2]) << std::endl;
+                            //std::cout << "cost: " << occupancyMap.at(v_ijk[0], v_ijk[1], v_ijk[2]) << std::endl;
 
                             alt = dist_.at<double>(u.ijk[0], u.ijk[1], u.ijk[2]) + std::sqrt(dx * dx + dy * dy + dz * dz);
 
@@ -164,8 +164,8 @@ std::deque<arp::Autopilot::Waypoint> planFlight(const Eigen::Vector3d &start,
     reached = false;
 
     auto temp_vec = path[goal_ijk];
-    std::cout << "temp_vec vertex: " << goal_ijk[0] << " " << goal_ijk[1] << " " << goal_ijk[2] << std::endl;
-    std::cout << "temp_vec vertex: " << temp_vec[0] << " " << temp_vec[1] << " " << temp_vec[2] << std::endl;
+    std::cout << "waypoint: " << goal_ijk[0] << " " << goal_ijk[1] << " " << goal_ijk[2] << std::endl;
+    std::cout << "waypoint: " << temp_vec[0] << " " << temp_vec[1] << " " << temp_vec[2] << std::endl;
 
     addWayPoint(goal_ijk, waypoints, dimensions);
     addWayPoint(temp_vec, waypoints, dimensions);
@@ -175,11 +175,11 @@ std::deque<arp::Autopilot::Waypoint> planFlight(const Eigen::Vector3d &start,
         if (temp_vec == start_ijk)
         {
             reached = true;
-            std::cout << "reached 2" << std::endl;
+            //std::cout << "reached 2" << std::endl;
             break;
         }
         temp_vec = path[temp_vec];
-        std::cout << "temp_vec vertex: " << temp_vec[0] << " " << temp_vec[1] << " " << temp_vec[2] << std::endl;
+        std::cout << "waypoint: " << temp_vec[0] << " " << temp_vec[1] << " " << temp_vec[2] << std::endl;
         addWayPoint(temp_vec, waypoints, dimensions);
     }
 
