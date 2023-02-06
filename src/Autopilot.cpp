@@ -254,6 +254,7 @@ void Autopilot::controllerCallback(uint64_t timeMicroseconds,
       // remove current waypoint, if position error below tolerance.
       if ((x.t_WS - positionReference).norm() < currentWp.posTolerance) {
         waypoints_.pop_front();
+        std::cout << "REACHED A WAYPOINT" << std::endl;
         if (waypoints_.empty()) {
           lastWaypointPopped = true;
         }

@@ -10,7 +10,8 @@ OccupancyMap::OccupancyMap(const std::string& filename)
   ROS_FATAL_STREAM("could not open map file " << filename);
   }
   // first read the map size along all the dimensions:
-  int sizes[3];
+  // int sizes[3];
+  int* sizes = dimensions_.data();
   if(!mapFile.read((char*)sizes, 3*sizeof(int))) {
   ROS_FATAL_STREAM("could not read map file " << filename);
   }
@@ -29,4 +30,15 @@ OccupancyMap::OccupancyMap(const std::string& filename)
 OccupancyMap::operator const cv::Mat&() const
 {
     return wrapped_;
+}
+
+const OccupancyMap::Dimensions& OccupancyMap::dimensions() const
+{
+  return dimensions_;
+}
+
+double OccupancyMap::at(int x, int y, int z) const
+{
+  // TODO pull out using data_.at<double>()?
+  return static_cast<double>(wrapped_.at<char>(x, y, z));
 }

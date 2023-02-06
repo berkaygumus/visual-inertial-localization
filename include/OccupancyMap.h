@@ -11,9 +11,13 @@
 /// data on its own once the owning OccupancyMap instance goes out of scope.
 class OccupancyMap {
 public:
+    using Dimensions = std::array<int,3>;
     explicit OccupancyMap(const std::string& filename);
     operator const cv::Mat&() const;
+    const Dimensions& dimensions() const;
+    double at(int x, int y, int z) const;
 private:
-    std::vector<char> mapData_; //< Points to 3d occupancy map
-    cv::Mat wrapped_; //< Wraps map data for easy access
+    std::vector<char> mapData_; ///< Points to 3d occupancy map
+    Dimensions dimensions_; ///< The dimensions of the data
+    cv::Mat wrapped_; ///< Wraps map data for easy access
 };
