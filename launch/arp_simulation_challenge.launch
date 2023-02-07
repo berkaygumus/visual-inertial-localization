@@ -63,7 +63,8 @@
     <param name="occupancymap" value="occupancy-map_skokloster.dat" />
     <!--param name="occupancymap" value="occupancy-map_garching.dat" /-->
     <!-- point B position -->
-    <rosparam param="pointB">[0.0, 10.0, 1.0]</rosparam>
+    <rosparam param="pointB">[0.0, 1.0, 1.0]</rosparam>
+  <node pkg="rviz" type="rviz" name="rviz" args="-d $(find ardrone_practicals)/config/rviz_control.rviz"/>
 
     <param name="inflation" value="10" />
   </node>

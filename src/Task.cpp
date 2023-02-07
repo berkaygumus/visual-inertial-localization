@@ -53,6 +53,7 @@ void Task::startJourney(bool checkFlying)
     if (checkFlying && !autopilot_.isFlying()) {
         autopilot_.takeoff();
         // wait for the takeoff to finish
+        timer_.setPeriod(ros::WallDuration(3), true); // needs to be reset because of how ros::(Steady)Timer is implemented.
         timer_.start();
         return; // timer_.start() will call startJourney again once we have taken off
     }
