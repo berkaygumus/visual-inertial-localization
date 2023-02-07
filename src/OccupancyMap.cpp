@@ -39,8 +39,11 @@ OccupancyMap::OccupancyMap(const std::string& filename)
   }
 
   //inflate
+  int inflation = 0;
+  ros::NodeHandle nh; //is it safe?
+  if (!nh.getParam("arp_node/inflation", inflation)) ROS_FATAL("Could not find inflation parameter.");
 
-  for(int n=0; n<10; n++){
+  for(int n=0; n<inflation; n++){
     std::cout << "inflating map" << std::endl;
 
     //inflate the occupancy
