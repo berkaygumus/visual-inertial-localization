@@ -93,8 +93,8 @@ void checkKeysForCommand(arp::Autopilot& autopilot,
 
     if (state[SDL_SCANCODE_P]) {
       printCommand("Entering challenge mode...        status=", droneStatus);
-      task.execute();
       printStatus(true);
+      task.execute();
     }
     
     if (!autopilot.isAutomatic() && (droneStatus == autopilot.Flying || 

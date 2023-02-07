@@ -206,7 +206,7 @@ int main(int argc, char **argv)
   if (!nh.getParam("arp_node/pointB", pointB)) ROS_FATAL("Couldn't load goal point.");
   // autopilot.setGoal(Eigen::Vector3d{pointB.data()});
 
-  Task task{autopilot, viEkf, Eigen::Vector3d{pointB.data()}, *occupancyMap};
+  Task task{nh, autopilot, viEkf, Eigen::Vector3d{pointB.data()}, *occupancyMap};
 
   // enter main event loop
   std::cout << "===== Hello AR Drone ====" << std::endl;

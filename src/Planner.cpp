@@ -21,6 +21,7 @@ void addWayPoint(std::vector<int> gridPoint,
                  std::deque<arp::Autopilot::Waypoint> &waypoints,
                  const OccupancyMap::Dimensions& dimensions)
 {
+    std::cout << "PATH: (" << gridPoint[0] << "," << gridPoint[1]  << "," << gridPoint[2] << ")" << std::endl;
     int const *const sizes_ = dimensions.data(); 
     arp::Autopilot::Waypoint p;
     p.x = (double(gridPoint[0]) - ((double(sizes_[0]) - 1) / 2)) / 10;

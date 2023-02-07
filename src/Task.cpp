@@ -4,10 +4,22 @@
 #include <chrono>
 #include <iostream>
 
-Task::Task(arp::Autopilot& autopilot, arp::ViEkf& viEkf, Eigen::Vector3d goal, const OccupancyMap& occupancyMap) : 
-        autopilot_{autopilot}, viEkf_{viEkf}, goal_{goal}, occupancyMap_{occupancyMap} 
+Task::Task(ros::NodeHandle& nh, arp::Autopilot& autopilot, arp::ViEkf& viEkf, Eigen::Vector3d goal, const OccupancyMap& occupancyMap) : 
+        autopilot_{autopilot}, viEkf_{viEkf}, goal_{goal}, occupancyMap_{occupancyMap}
 {
     autopilot_.onDestinationReached(std::bind(&Task::goalReachedCallback, std::ref(*this)));
+    timer_ = nh.createSteadyTimer(
+        ros::WallDuration(3/*seconds*/),
+        &Task::timerCallback,
+        this, // receiver object
+        true, // oneshot
+        false // autostart
+    );
+}
+
+void Task::timerCallback(const ros::SteadyTimerEvent& event)
+{
+    startJourney(false);
 }
 
 void Task::execute()
@@ -36,11 +48,13 @@ void Task::pause()
     autopilot_.setManual();
 }
 
-void Task::startJourney()
+void Task::startJourney(bool checkFlying)
 {
-    if (!autopilot_.isFlying()) {
+    if (checkFlying && !autopilot_.isFlying()) {
         autopilot_.takeoff();
-        std::this_thread::sleep_for(std::chrono::seconds(3)); // wait for the takeoff to finish
+        // wait for the takeoff to finish
+        timer_.start();
+        return; // timer_.start() will call startJourney again once we have taken off
     }
     auto dest = currentJourney_ == Journey::ToGoal ? goal_ : start_;
     autopilot_.flyPath(Planner::planFlight(viEkf_.getPositionEstimate(), dest, occupancyMap_));
