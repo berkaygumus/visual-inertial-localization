@@ -151,6 +151,11 @@ std::deque<arp::Autopilot::Waypoint> planFlight(const Eigen::Vector3d &start,
     // create waypoints using A*
     std::deque<arp::Autopilot::Waypoint> waypoints;
 
+    if (!reached) {
+        std::cout << "NO PATH AVAILABLE" << std::endl;
+        return waypoints;
+    }
+
     reached = false;
 
     auto temp_vec = path[goal_ijk];
