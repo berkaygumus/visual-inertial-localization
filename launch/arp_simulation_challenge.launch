@@ -64,6 +64,7 @@
     <!--param name="occupancymap" value="occupancy-map_garching.dat" /-->
     <!-- point B position -->
     <rosparam param="pointB">[0.0, 1.0, 1.0]</rosparam>
+    <param name="inflation" value="10" />
   </node>
 
 </launch>
