@@ -20,4 +20,5 @@ private:
     std::vector<char> mapData_; ///< Points to 3d occupancy map
     Dimensions dimensions_; ///< The dimensions of the data
     cv::Mat wrapped_; ///< Wraps map data for easy access
+    cv::Mat occupancy_map_; //inflated occupancy map
 };

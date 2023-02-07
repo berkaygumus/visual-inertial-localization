@@ -25,6 +25,51 @@ OccupancyMap::OccupancyMap(const std::string& filename)
   wrapped_ = cv::Mat{3, sizes, CV_8SC1, mapData_.data()};
 
   std::cout << "Loaded occupancy map \"" << filename << "\"." << std::endl;
+
+  occupancy_map_ = cv::Mat(3, sizes, CV_64FC1);
+  cv::Mat occupancy_map1_ = cv::Mat(3, sizes, CV_64FC1);
+
+  for(int i=0; i<sizes[0]; i++ ){
+    for(int j=0; j<sizes[1]; j++ ){
+      for(int k=0; k<sizes[2]; k++ ){
+        occupancy_map_.at<double>(i,j,k) =  static_cast<double>(wrapped_.at<char>(i,j,k));
+        //std::cout << "map " <<  occupancy_map_.at<double>(i,j,k) << std::endl;
+      }
+    }
+  }
+
+  //inflate
+
+  for(int n=0; n<10; n++){
+    std::cout << "inflating map" << std::endl;
+
+    //inflate the occupancy
+    for(int i=1; i<sizes[0]-1; i++ ){
+      for(int j=1; j<sizes[1]-1; j++ ){
+        for(int k=1; k<sizes[2]-1; k++ ){
+          for(int dx=-1; dx<2; dx++){
+            for(int dy=-1; dy<2; dy++){
+              for(int dz=-1; dz<2; dz++){
+                occupancy_map1_.at<double>(i,j,k) =  std::max(occupancy_map_.at<double>(i,j,k),occupancy_map_.at<double>(i+dx,j+dy,k+dz));
+              }
+            }
+          }
+        }
+      }
+    }
+    //occupancy_map_ = occupancy_map1_.clone();
+
+    for(int i=1; i<sizes[0]-1; i++ ){
+      for(int j=1; j<sizes[1]-1; j++ ){
+        for(int k=1; k<sizes[2]-1; k++ ){
+          occupancy_map_.at<double>(i,j,k) = occupancy_map1_.at<double>(i,j,k);
+        }
+      }
+    }
+
+  }
+
+
 }
 
 OccupancyMap::operator const cv::Mat&() const
@@ -40,5 +85,6 @@ const OccupancyMap::Dimensions& OccupancyMap::dimensions() const
 double OccupancyMap::at(int x, int y, int z) const
 {
   // TODO pull out using data_.at<double>()?
-  return static_cast<double>(wrapped_.at<char>(x, y, z));
+  //return static_cast<double>(wrapped_.at<char>(x, y, z));
+  return occupancy_map_.at<double>(x, y, z);
 }

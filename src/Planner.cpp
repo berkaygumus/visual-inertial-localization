@@ -36,19 +36,8 @@ std::deque<arp::Autopilot::Waypoint> planFlight(const Eigen::Vector3d &start,
                                                 const Eigen::Vector3d &goal,
                                                 const OccupancyMap &occupancyMap)
 {
-    // TODO: inflate the cost map
-
-    // std::cout << "sizes: " << sizes_[0] << " " << sizes_[1] << " " << sizes_[2] << std::endl;
-    /*for(int i=0; i<sizes_[0]; i++){
-        for(int j=0; i<sizes_[1]; j++){
-        for(int k=0; i<sizes_[2]; k++){
-            //signed char values range is [-128, +127]
-            //std::cout << wrappedMapData_.at<float>(i,j,k) << " ";
-            std::cout << static_cast<double>(wrappedMapData_.at<char>(i,j,k)) << " ";
-        }
-        std::cout << std::endl;
-        }
-    }*/
+    
+    std::cout << "planning flight " << std::endl;
 
     // creating and aliasing variables to glue together vest's and gümüs' code
     const auto& dimensions = occupancyMap.dimensions();
@@ -126,7 +115,7 @@ std::deque<arp::Autopilot::Waypoint> planFlight(const Eigen::Vector3d &start,
                         v_ijk[0] = u.ijk[0] + dx;
                         v_ijk[1] = u.ijk[1] + dy;
                         v_ijk[2] = u.ijk[2] + dz;
-                        if (v_ijk[0] >= 0 && v_ijk[0] < sizes_[0] && v_ijk[1] >= 0 && v_ijk[1] < sizes_[1] && v_ijk[2] >= 0 && v_ijk[2] < sizes_[2] && occupancyMap.at(v_ijk[0], v_ijk[1], v_ijk[2]) < 3 // if it is unblocked TODO: there is a problem in cost map
+                        if (v_ijk[0] >= 0 && v_ijk[0] < sizes_[0] && v_ijk[1] >= 0 && v_ijk[1] < sizes_[1] && v_ijk[2] >= 0 && v_ijk[2] < sizes_[2] && occupancyMap.at(v_ijk[0], v_ijk[1], v_ijk[2]) < -3 // if it is unblocked TODO: there is a problem in cost map
                             //&& closedList_.at<double>(v_ijk[0], v_ijk[1], v_ijk[2]) == -1
                         )
                         {
