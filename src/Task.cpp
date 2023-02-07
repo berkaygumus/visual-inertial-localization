@@ -75,4 +75,5 @@ void Task::startReachedCallback()
 {
     autopilot_.clearDestinationReachedCallback();
     std::cout << "Start reached." << std::endl;
+    autopilot_.land();
 }
