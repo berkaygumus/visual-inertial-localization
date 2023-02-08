@@ -408,7 +408,7 @@ bool Frontend::detectAndMatch(const cv::Mat& image, const Eigen::Vector3d & extr
   // must re-localize  using the BoW place recognition in the next call to detectAndMatch
   if (mostMatches > thresholds_.minMatches) {
     activeKeyframe_ = frameWithMostMatches;
-    std::cout << "Active key frame=" << activeKeyframe_ << ", matches=" << mostMatches << std::endl;
+    //std::cout << "Active key frame=" << activeKeyframe_ << ", matches=" << mostMatches << std::endl;
     lost_ = false;
   } else {
     lost_ = true;

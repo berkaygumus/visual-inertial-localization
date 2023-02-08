@@ -84,6 +84,15 @@ std::deque<arp::Autopilot::Waypoint> planFlight(const Eigen::Vector3d &start,
     std::cout << "start: " << start_ijk[0] << " " << start_ijk[1] << " " << start_ijk[2] << " "
                 << " goal: " << goal_ijk[0] << " " << goal_ijk[1] << " " << goal_ijk[2] << " " << std::endl;
 
+    int occ_thr = -3;
+    ros::NodeHandle nh; //is it safe?
+    if (!nh.getParam("arp_node/occ_thr", occ_thr)) ROS_FATAL("Could not find occ_thr parameter.");
+
+    if(occupancyMap.at(start_ijk[0], start_ijk[1], start_ijk[2]) >= occ_thr){
+        ROS_ERROR("start is invalid, change the point or increase threshold");
+
+    } 
+
     while (!open_vertex_vector_.empty())
     {
         // what if there is no path?
@@ -92,7 +101,7 @@ std::deque<arp::Autopilot::Waypoint> planFlight(const Eigen::Vector3d &start,
         std::pop_heap(open_vertex_vector_.begin(), open_vertex_vector_.end(), greater1());
         open_vertex_vector_.pop_back();
 
-        //std::cout << "pop vertex: " << u.ijk[0] << " " << u.ijk[1] << " " << u.ijk[2] << std::endl;
+        std::cout << "pop vertex: " << u.ijk[0] << " " << u.ijk[1] << " " << u.ijk[2] << std::endl;
 
         if (u.ijk == goal_ijk)
         {
@@ -115,7 +124,7 @@ std::deque<arp::Autopilot::Waypoint> planFlight(const Eigen::Vector3d &start,
                         v_ijk[0] = u.ijk[0] + dx;
                         v_ijk[1] = u.ijk[1] + dy;
                         v_ijk[2] = u.ijk[2] + dz;
-                        if (v_ijk[0] >= 0 && v_ijk[0] < sizes_[0] && v_ijk[1] >= 0 && v_ijk[1] < sizes_[1] && v_ijk[2] >= 0 && v_ijk[2] < sizes_[2] && occupancyMap.at(v_ijk[0], v_ijk[1], v_ijk[2]) < -3 // if it is unblocked TODO: there is a problem in cost map
+                        if (v_ijk[0] >= 0 && v_ijk[0] < sizes_[0] && v_ijk[1] >= 0 && v_ijk[1] < sizes_[1] && v_ijk[2] >= 0 && v_ijk[2] < sizes_[2] && occupancyMap.at(v_ijk[0], v_ijk[1], v_ijk[2]) < occ_thr // if it is unblocked TODO: there is a problem in cost map
                             //&& closedList_.at<double>(v_ijk[0], v_ijk[1], v_ijk[2]) == -1
                         )
                         {
