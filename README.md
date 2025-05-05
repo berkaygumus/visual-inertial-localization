@@ -1,6 +1,6 @@
 # README #
 
-Visual-Inertial Localziation and Navigation Project for [Mobile Robotics Practicals at TUM](https://srl.cit.tum.de/teaching/w22/mobileroboticspracticals )
+Visual-Inertial Localization and Navigation Project for [Mobile Robotics Practicals at TUM](https://srl.cit.tum.de/teaching/w22/mobileroboticspracticals )
 
 * Manual steering of an MAV in simulation (ROS/Gazebo) and the real world (via WiFi and ROS)
 * Camera calibration
